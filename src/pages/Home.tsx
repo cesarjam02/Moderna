@@ -5,6 +5,57 @@ import { Button } from '@/components/UI/Button';
 
 export const Home: FunctionalComponent<{ path?: string }> = () => {
   const { isAuthenticated, user } = useAuth();
+
+  // Si está autenticado, mostrar solo bienvenida simple
+  if (isAuthenticated) {
+    return (
+      <div
+        style={{
+          minHeight: '100%',
+          width: '100%',
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: '2rem',
+        }}
+      >
+        <div
+          style={{
+            textAlign: 'center',
+            padding: '3rem 2rem',
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            borderRadius: '12px',
+            boxShadow: '0 4px 20px rgba(255, 255, 255, 0.1)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            maxWidth: '600px',
+          }}
+        >
+          <h1
+            style={{
+              fontSize: '2.5rem',
+              fontWeight: 'bold',
+              margin: '0 0 1rem 0',
+              color: '#ffffff',
+            }}
+          >
+            👋 Bienvenido
+          </h1>
+          <p
+            style={{
+              fontSize: '1.5rem',
+              margin: 0,
+              color: '#d32f2f',
+              fontWeight: '600',
+            }}
+          >
+            {user?.name}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Si no está autenticado, mostrar contenido completo
   return (
     <div
       style={{
@@ -45,46 +96,31 @@ export const Home: FunctionalComponent<{ path?: string }> = () => {
         >
           Innovación, calidad y sabor ecuatoriano desde 1909
         </p>
-        {isAuthenticated ? (
-          <div
-            style={{
-              display: 'inline-block',
-              padding: '0.75rem 1.5rem',
-              backgroundColor: 'rgba(255, 255, 255, 0.2)',
-              borderRadius: '8px',
-              fontSize: '1rem',
-              fontWeight: '500',
-            }}
-          >
-            👋 Bienvenido, {user?.name}
-          </div>
-        ) : (
-          <Button
-            onClick={() => route('/login')}
-            style={{
-              padding: '0.875rem 2rem',
-              backgroundColor: '#ffffff',
-              color: '#d32f2f',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '1rem',
-              fontWeight: '600',
-              cursor: 'pointer',
-              transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.2)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-            }}
-          >
-            Iniciar Sesión
-          </Button>
-        )}
+        <Button
+          onClick={() => route('/login')}
+          style={{
+            padding: '0.875rem 2rem',
+            backgroundColor: '#ffffff',
+            color: '#d32f2f',
+            border: 'none',
+            borderRadius: '8px',
+            fontSize: '1rem',
+            fontWeight: '600',
+            cursor: 'pointer',
+            transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-2px)';
+            e.currentTarget.style.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.2)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+          }}
+        >
+          Iniciar Sesión
+        </Button>
       </section>
 
       {/* Grid de Secciones */}

@@ -48,7 +48,7 @@ function AppContent() {
       <Navbar />
       <div style={{ display: 'flex', minHeight: 'calc(100vh - 64px)' }}>
         <Sidebar />
-        <main style={{ flex: 1, padding: '1rem', backgroundColor: '#ffffff' }}>
+        <main style={{ flex: 1, padding: '1rem', backgroundColor: 'transparent' }}>
           <Router>
             <Home path="/" />
             <UsersPage path="/users" />
