@@ -2,6 +2,7 @@ import { FunctionalComponent } from 'preact';
 import { route } from 'preact-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/UI/Button';
+import logoImage from '@/images/logoblanco.png';
 
 export const Home: FunctionalComponent<{ path?: string }> = () => {
   const { isAuthenticated, user } = useAuth();
@@ -64,12 +65,70 @@ export const Home: FunctionalComponent<{ path?: string }> = () => {
         width: '100%',
       }}
     >
+      {/* Navbar pequeña */}
+      <nav
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '1rem 2rem',
+          backgroundColor: '#ffffff',
+          borderBottom: '1px solid #f0f0f0',
+          marginBottom: '2rem',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <img
+            src={logoImage}
+            alt="Moderna Alimentos"
+            style={{
+              height: '40px',
+              width: 'auto',
+              objectFit: 'contain',
+            }}
+          />
+          <span
+            style={{
+              fontSize: '1.1rem',
+              fontWeight: '600',
+              color: '#1a1a1a',
+            }}
+          >
+            Moderna Alimentos S.A.
+          </span>
+        </div>
+        <Button
+          onClick={() => route('/login')}
+          style={{
+            padding: '0.625rem 1.5rem',
+            backgroundColor: '#d32f2f',
+            color: '#ffffff',
+            border: 'none',
+            borderRadius: '6px',
+            fontSize: '0.95rem',
+            fontWeight: '600',
+            cursor: 'pointer',
+            transition: 'transform 0.2s ease, background-color 0.2s ease',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'scale(1.05)';
+            e.currentTarget.style.backgroundColor = '#b71c1c';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'scale(1)';
+            e.currentTarget.style.backgroundColor = '#d32f2f';
+          }}
+        >
+          Iniciar Sesión
+        </Button>
+      </nav>
+
       {/* Hero Section */}
       <section
         style={{
           background: 'linear-gradient(135deg, #d32f2f 0%, #b71c1c 100%)',
           color: 'white',
-          padding: '4rem 2rem',
+          padding: '2.5rem 2rem',
           textAlign: 'center',
           borderRadius: '12px',
           marginBottom: '3rem',
@@ -78,9 +137,9 @@ export const Home: FunctionalComponent<{ path?: string }> = () => {
       >
         <h1
           style={{
-            fontSize: '2.5rem',
+            fontSize: '2rem',
             fontWeight: 'bold',
-            margin: '0 0 1rem 0',
+            margin: '0 0 0.75rem 0',
             letterSpacing: '0.5px',
           }}
         >
@@ -88,39 +147,14 @@ export const Home: FunctionalComponent<{ path?: string }> = () => {
         </h1>
         <p
           style={{
-            fontSize: '1.25rem',
-            margin: '0 0 2rem 0',
+            fontSize: '1.1rem',
+            margin: 0,
             opacity: 0.95,
             fontWeight: 300,
           }}
         >
           Innovación, calidad y sabor ecuatoriano desde 1909
         </p>
-        <Button
-          onClick={() => route('/login')}
-          style={{
-            padding: '0.875rem 2rem',
-            backgroundColor: '#ffffff',
-            color: '#d32f2f',
-            border: 'none',
-            borderRadius: '8px',
-            fontSize: '1rem',
-            fontWeight: '600',
-            cursor: 'pointer',
-            transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-2px)';
-            e.currentTarget.style.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.2)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-          }}
-        >
-          Iniciar Sesión
-        </Button>
       </section>
 
       {/* Grid de Secciones */}

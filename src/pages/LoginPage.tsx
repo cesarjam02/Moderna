@@ -99,7 +99,7 @@ export const LoginPage: FunctionalComponent<{ path?: string }> = () => {
             >
               Correo electrónico
             </label>
-            <Input
+            <input
               type="email"
               value={email}
               onInput={(e) => setEmail((e.target as HTMLInputElement).value)}
@@ -129,7 +129,7 @@ export const LoginPage: FunctionalComponent<{ path?: string }> = () => {
             >
               Contraseña
             </label>
-            <Input
+            <input
               type="password"
               value={password}
               onInput={(e) => setPassword((e.target as HTMLInputElement).value)}
@@ -147,7 +147,7 @@ export const LoginPage: FunctionalComponent<{ path?: string }> = () => {
             />
           </div>
 
-          <Button
+          <button
             type="submit"
             disabled={loading}
             style={{
@@ -175,7 +175,7 @@ export const LoginPage: FunctionalComponent<{ path?: string }> = () => {
             }}
           >
             {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
-          </Button>
+          </button>
         </form>
 
         <div

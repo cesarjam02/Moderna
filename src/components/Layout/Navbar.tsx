@@ -2,6 +2,7 @@ import { FunctionalComponent, h } from 'preact';
 import { route } from 'preact-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/UI/Button';
+import logoImage from '@/images/logoblanco.png';
 
 export const Navbar: FunctionalComponent = () => {
   const { isAuthenticated, user, logout } = useAuth();
@@ -25,8 +26,25 @@ export const Navbar: FunctionalComponent = () => {
         boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
       }}
     >
-      <div style={{ fontWeight: 'bold', fontSize: '1.2rem' }}>
-        Moderna Alimentos S.A.
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '1rem',
+          fontWeight: 'bold',
+          fontSize: '1.2rem',
+        }}
+      >
+        <img
+          src={logoImage}
+          alt="Moderna Alimentos"
+          style={{
+            height: '40px',
+            width: 'auto',
+            objectFit: 'contain',
+          }}
+        />
+        <span>Moderna Alimentos S.A.</span>
       </div>
       <nav style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
         <NavLink href="/">Inicio</NavLink>
