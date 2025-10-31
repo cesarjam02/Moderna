@@ -1,2 +1,3 @@
 export * from './users.type';
 export * from './company.type';
+export * from './auth.type';
