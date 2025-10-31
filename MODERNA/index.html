@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/logo.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Moderna Alimentos S.A.</title>
+
+    <style>
+      body {
+        margin: 0;
+        font-family: "Segoe UI", Arial, sans-serif;
+        background: #f9f9f9;
+        color: #333;
+      }
+
+      /* === Encabezado === */
+      header {
+        position: relative;
+        text-align: center;
+        color: white;
+        background: linear-gradient(
+            rgba(0, 51, 102, 0.85),
+            rgba(0, 51, 102, 0.85)
+          ),
+          url("/logo.png") center/contain no-repeat;
+        background-blend-mode: multiply;
+        background-size: 250px;
+        background-position: center 40px;
+        padding: 4rem 1rem 3rem;
+      }
+
+      header h1 {
+        margin: 0;
+        font-size: 2.4rem;
+        letter-spacing: 1px;
+      }
+
+      header p {
+        margin: 0.8rem 0 0;
+        font-size: 1.1rem;
+      }
+
+      /* === Botón de Iniciar Sesión === */
+      .login-btn {
+        position: absolute;
+        top: 25px;
+        right: 25px;
+        background-color: #ffcc00;
+        color: #003366;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 30px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+      }
+
+      .login-btn:hover {
+        background-color: #ffd633;
+        transform: scale(1.05);
+      }
+
+      /* === Secciones === */
+      main {
+        max-width: 900px;
+        margin: 2rem auto;
+        padding: 0 1rem;
+      }
+
+      section {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+        padding: 2rem;
+        margin-bottom: 2rem;
+        transition: transform 0.3s ease;
+      }
+
+      section:hover {
+        transform: translateY(-4px);
+      }
+
+      section h2 {
+        color: #003366;
+        margin-top: 0;
+      }
+
+      /* === Pie de página === */
+      footer {
+        background-color: #003366;
+        color: white;
+        text-align: center;
+        padding: 1rem 0;
+        font-size: 0.9rem;
+      }
+    </style>
+  </head>
+
+  <body>
+    <header>
+      <button class="login-btn" onclick="window.location.href='/login'">
+        Iniciar sesión
+      </button>
+      <h1>Bienvenidos a Moderna Alimentos S.A.</h1>
+      <p>Innovación, calidad y sabor ecuatoriano desde 1909</p>
+    </header>
+
+    <main>
+      <section>
+        <h2>Sobre Nosotros</h2>
+        <p>
+          <strong>Moderna Alimentos S.A.</strong> es una de las principales empresas
+          ecuatorianas en la industria alimentaria, dedicada a la producción y
+          comercialización de alimentos de alta calidad. Con más de 100 años de
+          historia, ha consolidado marcas líderes en el mercado de harinas, panadería,
+          pastas y productos saludables.
+        </p>
+      </section>
+
+      <section>
+        <h2>Nuestra Misión</h2>
+        <p>
+          Brindar productos alimenticios que contribuyan al bienestar y nutrición de
+          las familias ecuatorianas, impulsando la innovación, sostenibilidad y el
+          desarrollo del país.
+        </p>
+      </section>
+
+      <section>
+        <h2>Compromiso con la Calidad</h2>
+        <p>
+          Moderna Alimentos garantiza estándares de producción certificados bajo
+          normas internacionales de inocuidad y sostenibilidad. Su enfoque está en
+          ofrecer productos confiables, nutritivos y elaborados con responsabilidad
+          social y ambiental.
+        </p>
+      </section>
+    </main>
+
+    <footer>
+      © 2025 Moderna Alimentos S.A. – Todos los derechos reservados.
+    </footer>
+
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
