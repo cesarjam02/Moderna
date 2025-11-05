@@ -1,40 +1,44 @@
-import { AuthResponse, LoginDTO, User } from '@/types';
+import { AuthResponse, LoginDTO, User, UserRole } from '@/types';
 import type { AuthService } from './AuthService';
 
-// Usuarios de prueba con contraseñas (en producción esto estaría en una base de datos)
+// NOTE: Updated users with all required roles for testing
 const MOCK_USERS: Array<User & { password: string }> = [
   {
-    id: 'u1',
-    name: 'Ana',
-    email: 'ana@example.com',
-    password: 'admin123',
-    role: 'admin',
-    active: true,
-    createdAt: new Date().toISOString(),
+    id: 'u1', name: 'Ana (Admin)', email: 'ana@example.com',
+    password: 'admin123', role: 'admin', active: true, createdAt: new Date().toISOString(),
   },
   {
-    id: 'u2',
-    name: 'Carlos',
-    email: 'carlos@example.com',
-    password: 'manager123',
-    role: 'manager',
-    active: true,
-    createdAt: new Date().toISOString(),
+    id: 'u2', name: 'Jorge (Solicitante)', email: 'jorge@example.com',
+    password: 'user123', role: 'SOLICITANTE', active: true, createdAt: new Date().toISOString(),
   },
   {
-    id: 'u3',
-    name: 'María',
-    email: 'maria@example.com',
-    password: 'user123',
-    role: 'user',
-    active: true,
-    createdAt: new Date().toISOString(),
+    id: 'u3', name: 'Wilson (HSEQ)', email: 'wilson@example.com',
+    password: 'user123', role: 'APROBADOR_HSEQ', active: true, createdAt: new Date().toISOString(),
   },
+  {
+    id: 'u4', name: 'Nelson (Área)', email: 'nelson@example.com',
+    password: 'user123', role: 'APROBADOR_AREA', active: true, createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'u5', name: 'Doctora Ana', email: 'medica@example.com',
+    password: 'user123', role: 'DOCTORA', active: true, createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'u6', name: 'Inspector Luis', email: 'inspector@example.com',
+    password: 'user123', role: 'INSPECTOR', active: true, createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'u7', name: 'Líder Producción', email: 'lider@example.com',
+    password: 'user123', role: 'LIDER', active: true, createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'u8', name: 'Maria (Trabajador)', email: 'maria@example.com',
+    password: 'user123', role: 'TRABAJADOR', active: true, createdAt: new Date().toISOString(),
+  }
 ];
 
 export class MockAuthService implements AuthService {
   async login(credentials: LoginDTO): Promise<AuthResponse> {
-    // Simular delay de red
     await new Promise((resolve) => setTimeout(resolve, 500));
 
     const user = MOCK_USERS.find(
@@ -48,7 +52,6 @@ export class MockAuthService implements AuthService {
     const { password, ...userWithoutPassword } = user;
     const token = `mock-token-${user.id}-${Date.now()}`;
 
-    // Guardar en localStorage para simular sesión
     localStorage.setItem('auth_token', token);
     localStorage.setItem('auth_user', JSON.stringify(userWithoutPassword));
 
@@ -82,4 +85,3 @@ export class MockAuthService implements AuthService {
     }
   }
 }
-

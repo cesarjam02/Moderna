@@ -2,7 +2,7 @@ import { FunctionalComponent, useState } from 'preact/hooks';
 import { route } from 'preact-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/UI/Button';
-import { Input } from '@/components/UI/Input';
+import { Input } from '@/components/UI/Input'; // Re-usaremos el Input, pero lo adaptamos
 
 export const LoginPage: FunctionalComponent<{ path?: string }> = () => {
   const { login, isAuthenticated } = useAuth();
@@ -11,7 +11,6 @@ export const LoginPage: FunctionalComponent<{ path?: string }> = () => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Si ya está autenticado, redirigir al home
   if (isAuthenticated) {
     route('/');
     return null;
@@ -21,7 +20,6 @@ export const LoginPage: FunctionalComponent<{ path?: string }> = () => {
     e.preventDefault();
     setError(null);
     setLoading(true);
-
     try {
       await login({ email, password });
       route('/');
@@ -32,173 +30,79 @@ export const LoginPage: FunctionalComponent<{ path?: string }> = () => {
     }
   };
 
+  // Clases para el Input en tema claro
+  const inputClass = "py-2 px-3 w-full rounded-md bg-gray-50 border border-gray-300 text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-rojo-moderna focus:border-rojo-moderna";
+
   return (
-    <div
-      style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        minHeight: '100vh',
-        backgroundColor: '#ffffff',
-        padding: '2rem',
-      }}
-    >
-      <div
-        style={{
-          width: '100%',
-          maxWidth: '400px',
-          backgroundColor: '#ffffff',
-          padding: '2.5rem',
-          borderRadius: '12px',
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
-          border: '1px solid #f0f0f0',
-        }}
-      >
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <h1
-            style={{
-              color: '#1a1a1a',
-              margin: '0 0 0.5rem 0',
-              fontSize: '2rem',
-              fontWeight: '600',
-            }}
-          >
-            Iniciar Sesión
-          </h1>
-          <p style={{ color: '#666', margin: 0, fontSize: '0.95rem' }}>
-            Ingresa tus credenciales para acceder
-          </p>
+    <div className="flex justify-center items-center min-h-screen bg-gray-100 p-8">
+      <div className="w-full max-w-md bg-white p-10 rounded-xl shadow-2xl border border-gray-200">
+        
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Iniciar Sesión</h1>
+          <p className="text-gray-500">Ingresa tus credenciales para acceder</p>
         </div>
 
         {error && (
-          <div
-            style={{
-              backgroundColor: '#fee',
-              color: '#c33',
-              padding: '0.75rem',
-              borderRadius: '8px',
-              marginBottom: '1.5rem',
-              fontSize: '0.9rem',
-              border: '1px solid #fcc',
-            }}
-          >
+          <div className="bg-red-100 border border-red-300 text-red-700 px-4 py-3 rounded-lg mb-6 text-sm">
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '1.5rem' }}>
-            <label
-              style={{
-                display: 'block',
-                marginBottom: '0.5rem',
-                color: '#333',
-                fontWeight: '500',
-                fontSize: '0.9rem',
-              }}
-            >
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Correo electrónico
             </label>
-            <input
+            <Input
               type="email"
               value={email}
               onInput={(e) => setEmail((e.target as HTMLInputElement).value)}
               placeholder="tu@email.com"
               required
               disabled={loading}
-              style={{
-                padding: '0.75rem',
-                border: '1px solid #ddd',
-                borderRadius: '8px',
-                fontSize: '1rem',
-                width: '100%',
-                boxSizing: 'border-box',
-              }}
+              className={inputClass} // Aplicamos clase de tema claro
             />
           </div>
 
-          <div style={{ marginBottom: '2rem' }}>
-            <label
-              style={{
-                display: 'block',
-                marginBottom: '0.5rem',
-                color: '#333',
-                fontWeight: '500',
-                fontSize: '0.9rem',
-              }}
-            >
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Contraseña
             </label>
-            <input
+            <Input
               type="password"
               value={password}
               onInput={(e) => setPassword((e.target as HTMLInputElement).value)}
               placeholder="••••••••"
               required
               disabled={loading}
-              style={{
-                padding: '0.75rem',
-                border: '1px solid #ddd',
-                borderRadius: '8px',
-                fontSize: '1rem',
-                width: '100%',
-                boxSizing: 'border-box',
-              }}
+              className={inputClass} // Aplicamos clase de tema claro
             />
           </div>
 
-          <button
+          <Button
             type="submit"
             disabled={loading}
-            style={{
-              width: '100%',
-              padding: '0.875rem',
-              backgroundColor: '#d32f2f',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '1rem',
-              fontWeight: '600',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              opacity: loading ? 0.7 : 1,
-              transition: 'background-color 0.2s ease',
-            }}
-            onMouseEnter={(e) => {
-              if (!loading) {
-                e.currentTarget.style.backgroundColor = '#b71c1c';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!loading) {
-                e.currentTarget.style.backgroundColor = '#d32f2f';
-              }
-            }}
+            className="w-full bg-rojo-moderna text-white hover:bg-rojo-moderna-dark focus:ring-rojo-moderna"
           >
             {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
-          </button>
+          </Button>
         </form>
 
-        <div
-          style={{
-            marginTop: '2rem',
-            padding: '1rem',
-            backgroundColor: '#f8f9fa',
-            borderRadius: '8px',
-            fontSize: '0.85rem',
-            color: '#666',
-          }}
-        >
-          <strong style={{ display: 'block', marginBottom: '0.5rem', color: '#333' }}>
-            Usuarios de prueba:
+        {/* --- (REEMPLAZADO) --- */}
+        <div className="mt-8 p-4 bg-gray-50 rounded-lg text-xs text-gray-600">
+          <strong className="block mb-2 text-gray-700">
+            Usuarios de prueba (pass: user123):
           </strong>
-          <div style={{ lineHeight: '1.6' }}>
-            <div>Admin: ana@example.com / admin123</div>
-            <div>Manager: carlos@example.com / manager123</div>
-            <div>User: maria@example.com / user123</div>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+            <span>Admin: ana@example.com</span>
+            <span>HSEQ: wilson@example.com</span>
+            <span>Solicitante: jorge@example.com</span>
+            <span>Área: nelson@example.com</span>
+            <span>Trabajador: maria@example.com</span>
+            <span>Doctora: medica@example.com</span>
           </div>
         </div>
       </div>
     </div>
   );
 };
-

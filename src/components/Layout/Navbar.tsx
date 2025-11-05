@@ -13,139 +13,55 @@ export const Navbar: FunctionalComponent = () => {
   };
 
   return (
-    <header
-      style={{
-        height: '64px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '0 2rem',
-        backgroundColor: '#d32f2f', // rojo moderno
-        color: 'white',
-        borderBottom: '2px solid #b71c1c',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '1rem',
-          fontWeight: 'bold',
-          fontSize: '1.2rem',
-        }}
-      >
+    <header className="h-16 flex items-center justify-between px-8 bg-rojo-moderna text-white shadow-lg">
+      {/* Logo y Título */}
+      <div className="flex items-center gap-4">
         <img
           src={logoImage}
           alt="Moderna Alimentos"
-          style={{
-            height: '40px',
-            width: 'auto',
-            objectFit: 'contain',
-          }}
+          className="h-10 w-auto object-contain"
         />
-        <span>Moderna Alimentos S.A.</span>
+        <span className="font-bold text-lg">Moderna Alimentos S.A.</span>
       </div>
-      <nav style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-        <NavLink href="/">Inicio</NavLink>
-        <NavLink href="/productos">Productos</NavLink>
-        <NavLink href="/nosotros">Nosotros</NavLink>
-        <NavLink href="/contacto">Contacto</NavLink>
+
+      {/* Navegación */}
+      <nav className="flex items-center gap-6">
+        <a href="/" className="font-medium hover:text-red-100 transition-colors">Inicio</a>
+        <a href="/productos" className="font-medium hover:text-red-100 transition-colors">Productos</a>
+        <a href="/nosotros" className="font-medium hover:text-red-100 transition-colors">Nosotros</a>
+        <a href="/contacto" className="font-medium hover:text-red-100 transition-colors">Contacto</a>
+
         {isAuthenticated ? (
           <>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                padding: '0.5rem 1rem',
-                backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                borderRadius: '8px',
-                fontSize: '0.9rem',
-              }}
-            >
-              <span>👤</span>
-              <span>{user?.name}</span>
-              <span
-                style={{
-                  fontSize: '0.75rem',
-                  opacity: 0.8,
-                  textTransform: 'capitalize',
-                }}
-              >
-                ({user?.role})
-              </span>
+            {/* Info de Usuario */}
+            <div className="flex items-center gap-3 px-4 py-2 bg-black/20 rounded-lg">
+              <span className="text-xl">👤</span>
+              <div className="flex flex-col">
+                <span className="text-sm font-semibold">{user?.name}</span>
+                <span className="text-xs opacity-80 capitalize">({user?.role})</span>
+              </div>
             </div>
+            
+            {/* Botón Logout */}
             <Button
               onClick={handleLogout}
-              style={{
-                padding: '0.5rem 1rem',
-                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                color: 'white',
-                border: '1px solid rgba(255, 255, 255, 0.3)',
-                borderRadius: '6px',
-                fontSize: '0.9rem',
-                fontWeight: 500,
-                cursor: 'pointer',
-                transition: 'background-color 0.2s ease',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.2)';
-              }}
+              className="bg-black/30 text-white font-medium hover:bg-black/40"
             >
               Cerrar Sesión
             </Button>
           </>
         ) : (
-          <Button
-            onClick={() => route('/login')}
-            style={{
-              padding: '0.5rem 1rem',
-              backgroundColor: '#ffffff',
-              color: '#d32f2f',
-              border: 'none',
-              borderRadius: '6px',
-              fontSize: '0.9rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              transition: 'transform 0.2s ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'scale(1.05)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'scale(1)';
-            }}
-          >
-            Iniciar Sesión
-          </Button>
+          <>
+            {/* Botón Login */}
+            <Button
+              onClick={() => route('/login')}
+              className="bg-white text-rojo-moderna font-bold hover:bg-gray-100"
+            >
+              Iniciar Sesión
+            </Button>
+          </>
         )}
       </nav>
     </header>
   );
 };
-
-interface NavLinkProps {
-  href: string;
-  children: preact.ComponentChildren;
-}
-
-const NavLink: FunctionalComponent<NavLinkProps> = ({ href, children }) => (
-  <a
-    href={href}
-    style={{
-      color: 'white',
-      textDecoration: 'none',
-      fontWeight: 500,
-      fontSize: '0.95rem',
-      transition: 'opacity 0.2s ease-in-out',
-    }}
-    onMouseOver={(e) => (e.currentTarget.style.opacity = '0.8')}
-    onMouseOut={(e) => (e.currentTarget.style.opacity = '1')}
-  >
-    {children}
-  </a>
-);

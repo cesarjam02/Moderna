@@ -1,74 +1,79 @@
 import { Link } from 'preact-router/match';
+import { useAuth } from '@/contexts/AuthContext';
+
+const baseLinkClass = "block py-2.5 px-4 rounded-lg text-gray-200 hover:bg-gray-700 hover:text-white transition-colors duration-150";
+const activeLinkClass = "bg-rojo-moderna/10 text-rojo-moderna font-semibold";
 
 export function Sidebar() {
+  // Usamos el hook de Auth para obtener los roles
+  const { hasRole, hasAnyRole } = useAuth();
+
   return (
-    <aside
-      style={{
-        width: 220,
-        borderRight: '1px solid rgba(255, 255, 255, 0.1)',
-        padding: '1rem',
-        backgroundColor: 'rgba(255, 255, 255, 0.03)',
-      }}
-    >
+    <aside className="w-56 border-r border-gray-700 p-4 bg-gray-800">
       <nav>
-        <ul style={{ listStyle: 'none', padding: 0, display: 'grid', gap: '.5rem' }}>
+        <ul className="space-y-2">
+          {/* 1. Home (Todos lo ven) */}
           <li>
             <Link
               href="/"
-              style={{
-                color: '#ffffff',
-                textDecoration: 'none',
-                padding: '0.5rem',
-                borderRadius: '6px',
-                display: 'block',
-                transition: 'background-color 0.2s ease',
-              }}
-              activeStyle={{
-                backgroundColor: 'rgba(211, 47, 47, 0.2)',
-                color: '#d32f2f',
-              }}
+              className={baseLinkClass}
+              activeClassName={activeLinkClass}
             >
               Home
             </Link>
           </li>
-          <li>
-            <Link
-              href="/users"
-              style={{
-                color: '#ffffff',
-                textDecoration: 'none',
-                padding: '0.5rem',
-                borderRadius: '6px',
-                display: 'block',
-                transition: 'background-color 0.2s ease',
-              }}
-              activeStyle={{
-                backgroundColor: 'rgba(211, 47, 47, 0.2)',
-                color: '#d32f2f',
-              }}
-            >
-              Users
-            </Link>
-          </li>
-          <li>
-            <Link
-              href="/users/new"
-              style={{
-                color: '#ffffff',
-                textDecoration: 'none',
-                padding: '0.5rem',
-                borderRadius: '6px',
-                display: 'block',
-                transition: 'background-color 0.2s ease',
-              }}
-              activeStyle={{
-                backgroundColor: 'rgba(211, 47, 47, 0.2)',
-                color: '#d32f2f',
-              }}
-            >
-              Create User
-            </Link>
-          </li>
+          
+          {/* 2. Permisos (Todos los roles del flujo lo ven) */}
+          {hasAnyRole(['admin', 'LIDER', 'APROBADOR_HSEQ', 'APROBADOR_AREA', 'SOLICITANTE', 'TRABAJADOR', 'DOCTORA', 'INSPECTOR', 'user', 'manager']) && (
+            <li>
+              <Link
+                href="/permisos"
+                className={baseLinkClass}
+                activeClassName={activeLinkClass}
+              >
+                Permisos de Trabajo
+              </Link>
+            </li>
+          )}
+
+          {/* 3. Users (Solo Admin y Manager) */}
+          {hasAnyRole(['admin', 'manager']) && (
+            <li>
+              <Link
+                href="/users"
+                className={baseLinkClass}
+                activeClassName={activeLinkClass}
+              >
+                Users
+              </Link>
+            </li>
+          )}
+          
+          {/* 4. Create User (Solo Admin) */}
+          {hasRole('admin') && (
+            <li>
+              <Link
+                href="/users/new"
+                className={baseLinkClass}
+                activeClassName={activeLinkClass}
+              >
+                Create User
+              </Link>
+            </li>
+          )}
+
+          {/* 5. Indicadores (Solo Admin, LIDER, HSEQ, AREA) */}
+          {hasAnyRole(['admin', 'LIDER', 'APROBADOR_HSEQ', 'APROBADOR_AREA', 'manager']) && (
+            <li>
+              <Link
+                href="/indicadores"
+                className={baseLinkClass}
+                activeClassName={activeLinkClass}
+              >
+                Indicadores
+              </Link>
+            </li>
+          )}
         </ul>
       </nav>
     </aside>

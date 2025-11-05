@@ -7,15 +7,26 @@ export interface HttpOptions {
 }
 
 export async function http<T>(url: string, options: HttpOptions = {}): Promise<T> {
-  const { method = 'GET', body, headers } = options;
+  const { method = 'GET', body, headers = {} } = options;
+
+  const isFormData = body instanceof FormData;
+
+  // NOTE: Do not stringify body or set Content-Type if it's FormData
+  const requestBody = isFormData ? (body as FormData) : JSON.stringify(body);
+  
+  const requestHeaders = isFormData
+    ? headers // Let the browser set Content-Type for FormData
+    : {
+        'Content-Type': 'application/json',
+        ...headers,
+      };
+
   const res = await fetch(url, {
     method,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(headers || {})
-    },
-    body: body ? JSON.stringify(body) : undefined
+    headers: requestHeaders,
+    body: method !== 'GET' ? requestBody : undefined,
   });
+  
   if (!res.ok) throw new Error(`HTTP ${res.status} - ${res.statusText}`);
   return res.json() as Promise<T>;
 }

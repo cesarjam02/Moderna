@@ -3,10 +3,23 @@ import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { Layout } from '@/components/Layout/Container';
 import { Navbar } from '@/components/Layout/Navbar';
 import { Sidebar } from '@/components/Layout/Sidebar';
+
+// --- (NUEVO) Importar el protector de rutas ---
+import { ProtectedRoute } from '@/router/ProtectedRoute';
+
+// --- Páginas existentes ---
 import { Home } from '@/pages/Home';
 import { LoginPage } from '@/pages/LoginPage';
 import { UsersPage } from '@/pages/UsersPage';
 import { UserCreatePage } from '@/pages/UserCreatePage';
+
+// --- Páginas de Permisos ---
+import { PermisosPage } from '@/pages/PermisosPage';
+import { PermisoCreatePage } from '@/pages/PermisoCreatePage';
+import { PermisoDetailPage } from '@/pages/PermisoDetailPage';
+
+// (Componente para la página de Indicadores, puedes crearlo después)
+// import { IndicadoresPage } from '@/pages/IndicadoresPage';
 
 function AppContent() {
   const { isAuthenticated, loading } = useAuth();
@@ -14,25 +27,17 @@ function AppContent() {
   // Mostrar loading mientras se verifica la autenticación
   if (loading) {
     return (
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          minHeight: '100vh',
-          backgroundColor: '#ffffff',
-        }}
-      >
-        <div style={{ fontSize: '1.2rem', color: '#666' }}>Cargando...</div>
+      <div className="flex justify-center items-center min-h-screen bg-white">
+        <div className="text-lg text-gray-600">Cargando...</div>
       </div>
     );
   }
 
-  // Si no está autenticado, mostrar solo el contenido sin Navbar ni Sidebar
+  // Si no está autenticado, mostrar solo el contenido público
   if (!isAuthenticated) {
     return (
       <Layout>
-        <main style={{ minHeight: '100vh', backgroundColor: '#ffffff' }}>
+        <main className="min-h-screen">
           <Router>
             <Home path="/" />
             <LoginPage path="/login" />
@@ -42,17 +47,60 @@ function AppContent() {
     );
   }
 
-  // Si está autenticado, mostrar Navbar y Sidebar
+  // Si está autenticado, mostrar el layout del dashboard
   return (
     <Layout>
       <Navbar />
-      <div style={{ display: 'flex', minHeight: 'calc(100vh - 64px)' }}>
+      {/* NOTE: La 'calculación' de altura es necesaria para que 
+        el sidebar y el main ocupen el resto de la pantalla 
+        después del Navbar de 64px (h-16).
+      */}
+      <div className="flex" style={{ minHeight: 'calc(100vh - 64px)' }}>
         <Sidebar />
-        <main style={{ flex: 1, padding: '1rem', backgroundColor: 'transparent' }}>
+        <main className="flex-1 p-8 overflow-y-auto">
           <Router>
             <Home path="/" />
-            <UsersPage path="/users" />
-            <UserCreatePage path="/users/new" />
+            
+            {/* --- Rutas de Permisos (Protegidas) --- */}
+            <ProtectedRoute 
+              path="/permisos" 
+              component={PermisosPage} 
+              roles={['admin', 'LIDER', 'APROBADOR_HSEQ', 'APROBADOR_AREA', 'SOLICITANTE', 'TRABAJADOR', 'DOCTORA', 'INSPECTOR', 'user', 'manager']} 
+            />
+            <ProtectedRoute 
+              path="/permisos/nuevo" 
+              component={PermisoCreatePage} 
+              // Solo admin, solicitantes y usuarios base pueden crear
+              roles={['admin', 'SOLICITANTE', 'user']} 
+            />
+            <ProtectedRoute 
+              path="/permisos/:id" 
+              component={PermisoDetailPage} 
+              // Todos los roles involucrados pueden ver un permiso
+              roles={['admin', 'LIDER', 'APROBADOR_HSEQ', 'APROBADOR_AREA', 'SOLICITANTE', 'TRABAJADOR', 'DOCTORA', 'INSPECTOR', 'user', 'manager']} 
+            />
+            
+            {/* --- Rutas de Admin (Protegidas) --- */}
+            <ProtectedRoute 
+              path="/users" 
+              component={UsersPage} 
+              roles={['admin', 'manager']} 
+            />
+            <ProtectedRoute 
+              path="/users/new" 
+              component={UserCreatePage} 
+              roles={['admin']} 
+            />
+            
+            {/* // --- Ruta de Indicadores (Protegida) ---
+            // (Descomenta esto cuando crees la página IndicadoresPage.tsx)
+            // <ProtectedRoute 
+            //   path="/indicadores" 
+            //   component={IndicadoresPage} 
+            //   roles={['admin', 'LIDER', 'APROBADOR_HSEQ', 'APROBADOR_AREA', 'manager']} 
+            // /> 
+            */}
+            
           </Router>
         </main>
       </div>
