@@ -53,7 +53,7 @@ export const LoginPage: FunctionalComponent<{ path?: string }> = () => {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Correo electrónico
             </label>
-            <Input
+            <input
               type="email"
               value={email}
               onInput={(e) => setEmail((e.target as HTMLInputElement).value)}
@@ -68,7 +68,7 @@ export const LoginPage: FunctionalComponent<{ path?: string }> = () => {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Contraseña
             </label>
-            <Input
+            <input
               type="password"
               value={password}
               onInput={(e) => setPassword((e.target as HTMLInputElement).value)}
@@ -79,13 +79,13 @@ export const LoginPage: FunctionalComponent<{ path?: string }> = () => {
             />
           </div>
 
-          <Button
+          <button
             type="submit"
             disabled={loading}
             className="w-full bg-rojo-moderna text-white hover:bg-rojo-moderna-dark focus:ring-rojo-moderna"
           >
             {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
-          </Button>
+          </button>
         </form>
 
         {/* --- (REEMPLAZADO) --- */}
