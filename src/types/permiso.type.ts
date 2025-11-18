@@ -21,6 +21,7 @@ export interface Permiso {
   departamento: Departamento;
   area: string;
   maquinaria: string;
+  localidad?: string;
   tiposTrabajo: TipoTrabajo[];
   personalAutorizado: PersonalAutorizado[];
 
@@ -51,7 +52,8 @@ export type TipoTrabajo =
   | 'ELECTRICO' 
   | 'QUIMICOS' 
   | 'IZAJES' 
-  | 'EXCAVACIONES';
+  | 'EXCAVACIONES'
+    'EXCAVACIONES / ZANJAS';
 
 
 // --- Sub-Interfaces ---

@@ -1,16 +1,29 @@
 import { FunctionalComponent } from 'preact';
-import { Permiso, TipoTrabajo, PersonalAutorizado, Aprobacion, Monitoreo } from '@/types';
-import logo from '@/images/logo.png'; 
+import { Permiso, TipoTrabajo, Aprobacion, Monitoreo } from '@/types';
+import logo from '@/images/logo.png';
 
 interface PermisoPDFProps {
   permiso: Permiso | null;
   id: string;
 }
 
+// Helper para formatear fechas (DD/MM/AAAA)
 const formatDate = (dateString?: string): string => {
-  if (!dateString) return '---';
+  if (!dateString) return '';
   const date = new Date(dateString);
-  if (isNaN(date.getTime())) return '---';
+  if (isNaN(date.getTime())) return '';
+  return date.toLocaleDateString('es-EC', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+};
+
+// Helper para formatear fecha y hora (DD/MM/AAAA HH:MM)
+const formatDateTime = (dateString?: string): string => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return '';
   return date.toLocaleString('es-EC', {
     year: 'numeric',
     month: '2-digit',
@@ -21,39 +34,39 @@ const formatDate = (dateString?: string): string => {
 };
 
 const Checkbox: FunctionalComponent<{ label: string; checked: boolean }> = ({ label, checked }) => (
-  <div style={{ display: 'flex', alignItems: 'center', marginRight: '16px', fontSize: '9px' }}>
+  <div style={{ display: 'flex', alignItems: 'center', fontSize: '9px', lineHeight: '1' }}>
     <div style={{
       width: '12px',
       height: '12px',
       border: '1px solid #000',
-      marginRight: '6px',
+      marginRight: '4px',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      fontFamily: 'Helvetica, Arial, sans-serif',
-      fontWeight: 'bold',
+      flexShrink: 0,
+      backgroundColor: checked ? '#333' : 'transparent',
+      color: checked ? '#fff' : 'transparent',
     }}>
       {checked ? 'X' : ''}
     </div>
-    <span>{label}</span>
+    <span style={{ textTransform: 'uppercase' }}>{label}</span>
   </div>
 );
 
-const SignatureBox: FunctionalComponent<{ aprobacion?: Aprobacion | Monitoreo | null; rol: string }> = ({ aprobacion, rol }) => {
+const SignatureBoxSmall: FunctionalComponent<{ aprobacion?: Aprobacion | Monitoreo | null; rol: string; overrideName?: string }> = ({ aprobacion, rol, overrideName }) => {
   const isSigned = aprobacion?.estado === 'FIRMADO';
-  const firma = isSigned && 'firmaUrl' in aprobacion && aprobacion.firmaUrl 
-    ? <img src={aprobacion.firmaUrl} alt="Firma" style={{ height: '30px', width: 'auto', margin: '0 auto', borderBottom: '1px solid #999' }} /> 
-    : <div style={{ height: '30px', borderBottom: '1px solid #999' }}></div>;
+  const firmaImg = isSigned && 'firmaUrl' in aprobacion && aprobacion.firmaUrl
+    ? <img src={aprobacion.firmaUrl} alt="Firma" style={{ height: '25px', width: 'auto', margin: '0 auto', display: 'block' }} />
+    : <div style={{ height: '25px' }}></div>;
 
-  const nombre = isSigned ? aprobacion.usuarioFirma?.nombre : '';
-  const fecha = isSigned ? formatDate(aprobacion.fechaFirma) : '';
+  const nombre = overrideName || (isSigned ? aprobacion.usuarioFirma?.nombre : '');
 
   return (
-    <div style={{ padding: '4px', height: '90px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', textAlign: 'center' }}>
-      {firma}
-      <p style={{ margin: '2px 0 0 0', fontSize: '9px', fontWeight: 'bold' }}>{nombre}</p>
-      <p style={{ margin: '0', fontSize: '8px', color: '#333' }}>{rol}</p>
-      <p style={{ margin: '0', fontSize: '8px', color: '#333' }}>{fecha}</p>
+    <div style={{ padding: '2px', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', height: '100%' }}>
+      {firmaImg}
+      <div style={{ borderTop: '1px solid #000', margin: '2px 0', width: '90%', alignSelf: 'center' }}></div>
+      <p style={{ margin: '0', fontSize: '7px', fontWeight: 'bold', textTransform: 'uppercase' }}>{nombre}</p>
+      <p style={{ margin: '0', fontSize: '6px', color: '#444' }}>{rol}</p>
     </div>
   );
 };
@@ -61,263 +74,321 @@ const SignatureBox: FunctionalComponent<{ aprobacion?: Aprobacion | Monitoreo | 
 export const PermisoPDF: FunctionalComponent<PermisoPDFProps> = ({ permiso, id }) => {
   if (!permiso) return null;
 
-  const allTiposTrabajo: TipoTrabajo[] = [
-    'TRABAJO EN CALIENTE', 'TRABAJO EN FRIO', 'TRABAJO EN ALTURAS',
-    'TRABAJO ELECTRICO', 'TRABAJOS CON QUIMICOS', 'ESPACIOS CONFINADOS',
-    'IZAJES', 'EXCAVACIONES'
+  // Mapeo exacto para mostrar las etiquetas que pide la imagen
+  // pero usando las claves que tenemos en el sistema
+  const tiposTrabajoMap: { label: string; value: TipoTrabajo }[] = [
+    { label: 'TRABAJO EN CALIENTE', value: 'CALIENTE' },
+    { label: 'TRABAJO EN FRÍO', value: 'FRIO' },
+    { label: 'TRABAJO EN ALTURAS', value: 'ALTURAS' },
+    { label: 'ESPACIOS CONFINADOS', value: 'ESPACIOS_CONFINADOS' },
+    { label: 'TRABAJO ELÉCTRICO', value: 'ELECTRICO' },
+    { label: 'TRABAJOS CON QUÍMICOS', value: 'QUIMICOS' },
+    { label: 'IZAJES', value: 'IZAJES' },
+    { label: 'EXCAVACIONES / ZANJAS', value: 'EXCAVACIONES' },
   ];
 
+  // Identificar aprobaciones
   const solicitante = permiso.aprobaciones.find(a => a.rolFirmante === 'SOLICITANTE');
   const trabajador = permiso.aprobaciones.find(a => a.rolFirmante === 'TRABAJADOR');
   const hseq = permiso.aprobaciones.find(a => a.rolFirmante === 'APROBADOR_HSEQ');
   const area = permiso.aprobaciones.find(a => a.rolFirmante === 'APROBADOR_AREA');
-  const lider = permiso.aprobaciones.find(a => a.rolFirmante === 'LIDER');
+  const liderCierre = permiso.aprobaciones.find(a => a.rolFirmante === 'LIDER');
   const medico = permiso.aprobacionMedica;
   const inspector = permiso.monitoreo;
 
+  const personalAutorizadoLleno = permiso.personalAutorizado || [];
+  const emptyRowsPersonal = Math.max(0, 4 - personalAutorizadoLleno.length);
+
   return (
     <div id={id} style={{ width: '816px', padding: '30px', backgroundColor: 'white', color: '#000', fontFamily: 'Arial, sans-serif' }}>
-      
-      <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', marginBottom: '10px' }}>
+
+      {/* --- ENCABEZADO --- */}
+      <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', marginBottom: '8px' }}>
         <tbody>
           <tr>
-            <td style={{ width: '25%', border: '1px solid #000', padding: '5px', textAlign: 'center' }}>
-              <img src={logo} alt="Logo" style={{ width: '150px', objectFit: 'contain' }} />
+            <td style={{ width: '20%', border: '1px solid #000', padding: '5px', textAlign: 'center' }}>
+              <img src={logo} alt="Logo" style={{ width: '100px', objectFit: 'contain' }} />
             </td>
-            <td style={{ width: '50%', border: '1px solid #000', padding: '5px', textAlign: 'center', verticalAlign: 'top' }}>
-              <h1 style={{ margin: '10px 0 5px 0', fontSize: '13px', fontWeight: 'bold' }}>PERMISO DE TRABAJO DE ALTO RIESGO</h1>
-              <h2 style={{ margin: 0, fontSize: '12px', fontWeight: 'bold' }}>GESTIÓN DE SEGURIDAD Y SALUD OCUPACIONAL</h2>
+            <td style={{ width: '60%', border: '1px solid #000', padding: '5px', textAlign: 'center', verticalAlign: 'middle' }}>
+              <h1 style={{ margin: '0', fontSize: '14px', fontWeight: 'bold' }}>PERMISO DE TRABAJO DE ALTO RIESGO</h1>
+              <h2 style={{ margin: '2px 0 0 0', fontSize: '11px', fontWeight: 'bold' }}>GESTIÓN DE SEGURIDAD Y SALUD OCUPACIONAL</h2>
             </td>
-            <td style={{ width: '25%', border: '1px solid #000', padding: '5px', fontSize: '10px', verticalAlign: 'top' }}>
-              <div><strong>CÓDIGO:</strong></div>
-              <div><strong>REVISIÓN:</strong> 01</div>
-              <div><strong>FECHA:</strong> {new Date().toLocaleDateString('es-EC')}</div>
+            <td style={{ width: '20%', border: '1px solid #000', padding: '5px', fontSize: '8px', verticalAlign: 'top' }}>
+              <div style={{ marginBottom: '2px' }}><strong>CÓDIGO:</strong> SIPT-R01</div>
+              <div style={{ marginBottom: '2px' }}><strong>REVISIÓN:</strong> 01</div>
+              <div style={{ marginBottom: '2px' }}><strong>FECHA:</strong> {new Date().toLocaleDateString('es-EC')}</div>
               <div><strong>PÁGINA:</strong> 1 de 2</div>
             </td>
           </tr>
         </tbody>
       </table>
-      
-      <div style={{ border: '1px solid #000', padding: '8px', fontSize: '9px', textAlign: 'justify', marginBottom: '10px' }}>
+
+      {/* --- CONVENIO --- */}
+      <div style={{ border: '1px solid #000', padding: '6px', fontSize: '7px', textAlign: 'justify', marginBottom: '8px' }}>
         <strong>CONVENIO PRIVADO DE RESPONSABILIDAD CIVIL DERIVADA DE CONTRATOS DE TRABAJO</strong>
-        <p style={{ margin: '5px 0' }}>
-          Yo, {permiso.contratista ? `representante legal de la Compañía ${permiso.contratista}` : (permiso.solicitante.nombre || '____________________')} que en
-          adelante se denominará "LA CONTRATISTA", declaro ser el único y absoluto responsable sobre la contratación, acciones, dirección, control y administración
-          de todos los trabajadores y/o colaboradores, empleados para cumplir las obligaciones contractuales adquiridas con MODERNA ALIMENTOS S.A.; así como,
-          dejo expresa constancia de mi compromiso para observar de la manera más estricta, las normas de prevención de riesgos de trabajo y seguridad industrial
-          exigidas por MODERNA ALIMENTOS S.A., para la ejecución de trabajos dentro de sus instalaciones. En consecuencia, declaro que mantendré una relación
-          directa con mi personal y dependientes; que proporcionaré a mis trabajadores equipos de protección personal, ropa, dispositivos y/o elementos adecuados para
-          la realización de las tareas que les corresponda, sin responsabilidad alguna para MODERNA ALIMENTOS S.A., ni para sus administradores, accionistas y/o
-          representantes.
-        </p>
-        <p style={{ margin: '5px 0' }}>
-          Si por un acto o resolución administrativa que causare estado, sea del Ministerio del Trabajo o del Instituto Ecuatoriano de Seguridad Social, o en virtud de alguna
-          sentencia judicial de última instancia con efectos de cosa juzgada, MODERNA ALIMENTOS S.A., se viere obligada a pagar algún valor a favor de un trabajador
-          contratado por LA CONTRATISTA, por concepto de indemnización por accidente de trabajo, enfermedad profesional, desahucio, despido intempestivo,
-          jubilación patronal o cualquier otra obligación o beneficio social, LA CONTRATISTA se obliga expresamente a reembolsar a MODERNA ALIMENTOS S.A., el
-          valor íntegro de lo pagado, incluyendo capital, intereses, costas judiciales, honorarios profesionales y cualquier otro gasto.
+        <p style={{ margin: '2px 0' }}>
+          Yo, <strong>{permiso.solicitante.nombre}</strong>, {permiso.contratista ? `representante legal de la Compañía ${permiso.contratista}` : 'en calidad de Solicitante'}, que en adelante se denominará "LA CONTRATISTA", declaro ser el único y absoluto responsable sobre la contratación, acciones, dirección, control y administración de todos los trabajadores y/o colaboradores.
         </p>
       </div>
 
-      <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', marginBottom: '10px', fontSize: '10px' }}>
-        <thead>
-          <tr style={{ backgroundColor: '#E0E0E0' }}>
-            <th colSpan={3} style={{ border: '1px solid #000', padding: '4px', textAlign: 'left' }}>1. INFORMACIÓN GENERAL</th>
-            <th style={{ border: '1px solid #000', padding: '4px' }}>Nro. Permiso: {permiso.numero}</th>
-          </tr>
-        </thead>
+      {/* --- 1. INFORMACIÓN GENERAL (CON FIRMAS INCORPORADAS COMO EN LA IMAGEN) --- */}
+      <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', marginBottom: '8px', fontSize: '9px' }}>
         <tbody>
-          <tr>
-            <td style={{ border: '1px solid #000', padding: '4px', width: '33%' }}><strong>FECHA SOLICITUD:</strong> {formatDate(permiso.fechaSolicitud)}</td>
-            <td style={{ border: '1px solid #000', padding: '4px', width: '33%' }}><strong>FECHA INICIO:</strong> {formatDate(permiso.fechaInicio)}</td>
-            <td style={{ border: '1px solid #000', padding: '4px', width: '33%' }} colSpan={2}><strong>FECHA FIN:</strong> {formatDate(permiso.fechaCaducidad)}</td>
-          </tr>
-          <tr>
-            <td style={{ border: '1px solid #000', padding: '4px' }}><strong>DEPARTAMENTO:</strong> {permiso.departamento}</td>
-            <td style={{ border: '1px solid #000', padding: '4px' }}><strong>ÁREA:</strong> {permiso.area}</td>
-            <td style={{ border: '1px solid #000', padding: '4px' }} colSpan={2}><strong>EQUIPO/MAQUINARIA:</strong> {permiso.maquinaria}</td>
-          </tr>
-          <tr>
-            <td colSpan={4} style={{ border: '1px solid #000', padding: '4px' }}><strong>TRABAJO A REALIZAR:</strong> {permiso.descripcionGeneral}</td>
-          </tr>
-          <tr>
-            <td colSpan={2} style={{ border: '1px solid #000', padding: '4px' }}><strong>EMPRESA CONTRATISTA:</strong> {permiso.contratista || ''}</td>
-            <td colSpan={2} style={{ border: '1px solid #000', padding: '4px' }}><strong>RUC:</strong> {permiso.rucContratista || ''}</td>
-          </tr>
-        </tbody>
-      </table>
-      
-      <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', marginBottom: '10px', fontSize: '10px' }}>
-        <thead>
-          <tr style={{ backgroundColor: '#E0E0E0' }}>
-            <th colSpan={4} style={{ border: '1px solid #000', padding: '4px', textAlign: 'left' }}>2. TIPO DE TRABAJO (Marque con una X el tipo de trabajo a realizar)</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            {[0, 1, 2, 3].map(i => (
-              <td key={i} style={{ border: '1px solid #000', padding: '4px', width: '25%' }}>
-                <Checkbox label={allTiposTrabajo[i]} checked={permiso.tiposTrabajo.includes(allTiposTrabajo[i])} />
-              </td>
-            ))}
-          </tr>
-          <tr>
-            {[4, 5, 6, 7].map(i => (
-              <td key={i} style={{ border: '1px solid #000', padding: '4px', width: '25%' }}>
-                <Checkbox label={allTiposTrabajo[i]} checked={permiso.tiposTrabajo.includes(allTiposTrabajo[i])} />
-              </td>
-            ))}
+          {/* Fila de Firmas Superiores */}
+          <tr style={{ height: '60px' }}>
+            <td style={{ width: '25%', border: '1px solid #000', padding: '0' }}>
+              <SignatureBoxSmall aprobacion={area} rol="APROBADOR (MODERNA ALIMENTOS)" />
+            </td>
+            <td style={{ width: '25%', border: '1px solid #000', padding: '0' }}>
+              <SignatureBoxSmall aprobacion={solicitante} rol="EJECUTOR / CONTRATISTA" />
+            </td>
+            <td style={{ width: '25%', border: '1px solid #000', padding: '0' }}>
+              <SignatureBoxSmall aprobacion={hseq} rol="REPRESENTANTE HSE" />
+            </td>
+            <td style={{ width: '25%', border: '1px solid #000', padding: '4px', verticalAlign: 'middle' }}>
+              <div style={{ marginBottom: '4px' }}><strong>SOLICITUD:</strong> {formatDate(permiso.fechaSolicitud)}</div>
+              <div style={{ marginBottom: '4px' }}><strong>INICIO:</strong> {formatDate(permiso.fechaInicio)}</div>
+              <div><strong>FIN:</strong> {formatDate(permiso.fechaCaducidad)}</div>
+            </td>
           </tr>
         </tbody>
       </table>
 
-      <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', marginBottom: '10px', fontSize: '10px' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', marginBottom: '8px', fontSize: '9px' }}>
         <thead>
           <tr style={{ backgroundColor: '#E0E0E0' }}>
-            <th colSpan={4} style={{ border: '1px solid #000', padding: '4px', textAlign: 'left' }}>3. PERSONAL AUTORIZADO</th>
-          </tr>
-          <tr style={{ backgroundColor: '#E0E0E0' }}>
-            <th style={{ border: '1px solid #000', padding: '4px' }}>NOMBRES Y APELLIDOS</th>
-            <th style={{ border: '1px solid #000', padding: '4px' }}>C.I.</th>
-            <th style={{ border: '1px solid #000', padding: '4px' }}>ACTIVIDAD</th>
-            <th style={{ border: '1px solid #000', padding: '4px', width: '25%' }}>FIRMA</th>
+            <th colSpan={4} style={{ border: '1px solid #000', padding: '2px 4px', textAlign: 'left', fontSize: '10px' }}>1. INFORMACIÓN GENERAL</th>
+            <th style={{ border: '1px solid #000', padding: '2px 4px', fontSize: '10px' }}>Nro: {permiso.numero}</th>
           </tr>
         </thead>
         <tbody>
-          {(permiso.personalAutorizado || []).map((p, i) => (
+          <tr>
+            <td style={{ border: '1px solid #000', padding: '3px' }}><strong>LOCALIDAD:</strong></td>
+            <td style={{ border: '1px solid #000', padding: '3px' }}>CAJABAMBA</td>
+            <td style={{ border: '1px solid #000', padding: '3px' }}><strong>DEPARTAMENTO:</strong></td>
+            <td colSpan={2} style={{ border: '1px solid #000', padding: '3px' }}>{permiso.departamento}</td>
+          </tr>
+          <tr>
+            <td style={{ border: '1px solid #000', padding: '3px' }}><strong>ÁREA:</strong></td>
+            <td style={{ border: '1px solid #000', padding: '3px' }}>{permiso.area}</td>
+            <td style={{ border: '1px solid #000', padding: '3px' }}><strong>EQUIPO:</strong></td>
+            <td colSpan={2} style={{ border: '1px solid #000', padding: '3px' }}>{permiso.maquinaria}</td>
+          </tr>
+          <tr>
+            <td colSpan={5} style={{ border: '1px solid #000', padding: '3px' }}>
+              <strong>TRABAJO A REALIZAR:</strong> {permiso.descripcionGeneral}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      {/* --- 2. TIPO DE TRABAJO --- */}
+      <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', marginBottom: '8px', fontSize: '9px' }}>
+        <thead>
+          <tr style={{ backgroundColor: '#E0E0E0' }}>
+            <th colSpan={4} style={{ border: '1px solid #000', padding: '2px 4px', textAlign: 'left', fontSize: '10px' }}>2. TIPO DE TRABAJO</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style={{ border: '1px solid #000', padding: '4px', width: '25%' }}>
+              <Checkbox label={tiposTrabajoMap[0].label} checked={permiso.tiposTrabajo.includes(tiposTrabajoMap[0].value)} />
+            </td>
+            <td style={{ border: '1px solid #000', padding: '4px', width: '25%' }}>
+              <Checkbox label={tiposTrabajoMap[1].label} checked={permiso.tiposTrabajo.includes(tiposTrabajoMap[1].value)} />
+            </td>
+            <td style={{ border: '1px solid #000', padding: '4px', width: '25%' }}>
+              <Checkbox label={tiposTrabajoMap[2].label} checked={permiso.tiposTrabajo.includes(tiposTrabajoMap[2].value)} />
+            </td>
+            <td style={{ border: '1px solid #000', padding: '4px', width: '25%' }}>
+              <Checkbox label={tiposTrabajoMap[3].label} checked={permiso.tiposTrabajo.includes(tiposTrabajoMap[3].value)} />
+            </td>
+          </tr>
+          <tr>
+            <td style={{ border: '1px solid #000', padding: '4px' }}>
+              <Checkbox label={tiposTrabajoMap[4].label} checked={permiso.tiposTrabajo.includes(tiposTrabajoMap[4].value)} />
+            </td>
+            <td style={{ border: '1px solid #000', padding: '4px' }}>
+              <Checkbox label={tiposTrabajoMap[5].label} checked={permiso.tiposTrabajo.includes(tiposTrabajoMap[5].value)} />
+            </td>
+            <td style={{ border: '1px solid #000', padding: '4px' }}>
+              <Checkbox label={tiposTrabajoMap[6].label} checked={permiso.tiposTrabajo.includes(tiposTrabajoMap[6].value)} />
+            </td>
+            <td style={{ border: '1px solid #000', padding: '4px' }}>
+              <Checkbox label={tiposTrabajoMap[7].label} checked={permiso.tiposTrabajo.includes(tiposTrabajoMap[7].value)} />
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      {/* --- 3. PERSONAL AUTORIZADO --- */}
+      <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', marginBottom: '8px', fontSize: '9px' }}>
+        <thead>
+          <tr style={{ backgroundColor: '#E0E0E0' }}>
+            <th colSpan={4} style={{ border: '1px solid #000', padding: '2px 4px', textAlign: 'left', fontSize: '10px' }}>3. PERSONAL AUTORIZADO</th>
+          </tr>
+          <tr style={{ backgroundColor: '#F5F5F5' }}>
+            <th style={{ border: '1px solid #000', padding: '3px' }}>NOMBRES Y APELLIDOS</th>
+            <th style={{ border: '1px solid #000', padding: '3px' }}>C.I.</th>
+            <th style={{ border: '1px solid #000', padding: '3px' }}>ACTIVIDAD</th>
+            <th style={{ border: '1px solid #000', padding: '3px' }}>FIRMA</th>
+          </tr>
+        </thead>
+        <tbody>
+          {personalAutorizadoLleno.map((p, i) => (
             <tr key={p.id || i}>
-              <td style={{ border: '1px solid #000', padding: '4px' }}>{p.nombres} {p.apellidos}</td>
-              <td style={{ border: '1px solid #000', padding: '4px' }}>{p.cedula}</td>
-              <td style={{ border: '1px solid #000', padding: '4px' }}>{p.actividad || ''}</td>
-              <td style={{ border: '1px solid #000', padding: '4px', height: '30px' }}></td>
+              <td style={{ border: '1px solid #000', padding: '3px' }}>{p.nombres} {p.apellidos}</td>
+              <td style={{ border: '1px solid #000', padding: '3px', textAlign: 'center' }}>{p.cedula}</td>
+              <td style={{ border: '1px solid #000', padding: '3px' }}>{p.actividad || ''}</td>
+              <td style={{ border: '1px solid #000', padding: '3px', height: '20px' }}></td>
             </tr>
           ))}
-          {Array.from({ length: Math.max(0, 4 - permiso.personalAutorizado.length) }).map((_, i) => (
-             <tr key={`empty-${i}`}>
-              <td style={{ border: '1px solid #000', padding: '4px', height: '30px' }}></td>
-              <td style={{ border: '1px solid #000', padding: '4px' }}></td>
-              <td style={{ border: '1px solid #000', padding: '4px' }}></td>
-              <td style={{ border: '1px solid #000', padding: '4px' }}></td>
+          {Array.from({ length: emptyRowsPersonal }).map((_, i) => (
+            <tr key={`empty-${i}`}>
+              <td style={{ border: '1px solid #000', padding: '3px', height: '20px' }}></td>
+              <td style={{ border: '1px solid #000', padding: '3px' }}></td>
+              <td style={{ border: '1px solid #000', padding: '3px' }}></td>
+              <td style={{ border: '1px solid #000', padding: '3px' }}></td>
             </tr>
           ))}
         </tbody>
       </table>
 
-      <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', marginBottom: '10px', fontSize: '10px' }}>
+      {/* --- 4. ATS --- */}
+      <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', marginBottom: '8px', fontSize: '9px' }}>
         <thead>
           <tr style={{ backgroundColor: '#E0E0E0' }}>
-            <th colSpan={3} style={{ border: '1px solid #000', padding: '4px', textAlign: 'left' }}>4. ANÁLISIS DE TRABAJO SEGURO (ATS)</th>
+            <th colSpan={4} style={{ border: '1px solid #000', padding: '2px 4px', textAlign: 'left', fontSize: '10px' }}>4. ANÁLISIS DE TRABAJO SEGURO (ATS)</th>
           </tr>
-          <tr style={{ backgroundColor: '#E0E0E0' }}>
-            <th style={{ border: '1px solid #000', padding: '4px', width: '33%' }}>DESCRIPCIÓN DE LA TAREA</th>
-            <th style={{ border: '1px solid #000', padding: '4px', width: '33%' }}>PELIGROS IDENTIFICADOS</th>
-            <th style={{ border: '1px solid #000', padding: '4px', width: '33%' }}>MEDIDAS DE CONTROL</th>
+          <tr style={{ backgroundColor: '#F5F5F5' }}>
+            <th style={{ border: '1px solid #000', padding: '3px', width: '30%' }}>DESCRIPCIÓN DE LA TAREA</th>
+            <th style={{ border: '1px solid #000', padding: '3px', width: '30%' }}>PELIGROS</th>
+            <th style={{ border: '1px solid #000', padding: '3px', width: '30%' }}>MEDIDAS DE CONTROL</th>
+            <th style={{ border: '1px solid #000', padding: '3px', width: '10%' }}>PERSONAS</th>
           </tr>
         </thead>
         <tbody>
           {(permiso.ats.tareas || []).map((t, idx) => (
             <tr key={t.id || idx}>
-              <td style={{ border: '1px solid #000', padding: '4px', verticalAlign: 'top' }}>{t.descripcion}</td>
-              <td style={{ border: '1px solid #000', padding: '4px', verticalAlign: 'top' }}>
-                <ul style={{ margin: 0, padding: '0 0 0 15px', listStyle: 'disc' }}>
+              <td style={{ border: '1px solid #000', padding: '3px', verticalAlign: 'top' }}>{t.descripcion}</td>
+              <td style={{ border: '1px solid #000', padding: '3px', verticalAlign: 'top' }}>
+                <ul style={{ margin: 0, padding: '0 0 0 10px' }}>
                   {t.peligros.map((p, i) => <li key={i}>{p}</li>)}
                 </ul>
               </td>
-              <td style={{ border: '1px solid #000', padding: '4px', verticalAlign: 'top' }}>
-                <ul style={{ margin: 0, padding: '0 0 0 15px', listStyle: 'disc' }}>
+              <td style={{ border: '1px solid #000', padding: '3px', verticalAlign: 'top' }}>
+                <ul style={{ margin: 0, padding: '0 0 0 10px' }}>
                   {t.medidas.map((m, i) => <li key={i}>{m}</li>)}
                 </ul>
               </td>
+              {idx === 0 && (
+                <td rowSpan={permiso.ats.tareas.length} style={{ border: '1px solid #000', padding: '3px', textAlign: 'center', verticalAlign: 'middle' }}>
+                  {permiso.ats.cantidadPersonas}
+                </td>
+              )}
             </tr>
           ))}
         </tbody>
       </table>
-      
-      {/* --- INICIO PÁGINA 2 --- */}
-      <div style={{ pageBreakBefore: 'always' }}></div>
 
-      <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', marginBottom: '10px', fontSize: '10px' }}>
+      {/* --- 5. MONITOREO DE GASES --- */}
+      <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', marginBottom: '8px', fontSize: '9px' }}>
         <thead>
           <tr style={{ backgroundColor: '#E0E0E0' }}>
-            <th colSpan={4} style={{ border: '1px solid #000', padding: '4px', textAlign: 'left' }}>5. REGISTRO DE MONITOREO DE GASES (Si aplica)</th>
+            <th colSpan={3} style={{ border: '1px solid #000', padding: '2px 4px', textAlign: 'left', fontSize: '10px' }}>5. REGISTRO DE MONITOREO DE GASES (Si aplica)</th>
+            <th style={{ border: '1px solid #000', padding: '2px 4px', textAlign: 'center' }}>INSPECTOR RESPONSABLE</th>
           </tr>
+        </thead>
+        <tbody>
+          <tr style={{ backgroundColor: '#F5F5F5', fontWeight: 'bold' }}>
+            <td style={{ border: '1px solid #000', padding: '3px', textAlign: 'center' }}>GAS</td>
+            <td style={{ border: '1px solid #000', padding: '3px', textAlign: 'center' }}>REGISTRO INICIAL</td>
+            <td style={{ border: '1px solid #000', padding: '3px', textAlign: 'center' }}>SEGUIMIENTO</td>
+            <td rowSpan={5} style={{ border: '1px solid #000', padding: '0', verticalAlign: 'bottom', textAlign: 'center', width: '25%' }}>
+               <SignatureBoxSmall aprobacion={inspector} rol="INSPECTOR DE SEGURIDAD" />
+            </td>
+          </tr>
+          <tr>
+            <td style={{ border: '1px solid #000', padding: '3px' }}>Oxígeno (O2)</td>
+            <td style={{ border: '1px solid #000', padding: '3px', textAlign: 'center' }}>{permiso.monitoreo?.lecturaInicial?.o2 || ''}</td>
+            <td style={{ border: '1px solid #000', padding: '3px', textAlign: 'center' }}>{permiso.monitoreo?.lecturaPeriodica?.o2 || ''}</td>
+          </tr>
+          <tr>
+            <td style={{ border: '1px solid #000', padding: '3px' }}>Monóxido (CO)</td>
+            <td style={{ border: '1px solid #000', padding: '3px', textAlign: 'center' }}>{permiso.monitoreo?.lecturaInicial?.co || ''}</td>
+            <td style={{ border: '1px solid #000', padding: '3px', textAlign: 'center' }}>{permiso.monitoreo?.lecturaPeriodica?.co || ''}</td>
+          </tr>
+          <tr>
+            <td style={{ border: '1px solid #000', padding: '3px' }}>Explosividad (LEL)</td>
+            <td style={{ border: '1px solid #000', padding: '3px', textAlign: 'center' }}>{permiso.monitoreo?.lecturaInicial?.lel || ''}</td>
+            <td style={{ border: '1px solid #000', padding: '3px', textAlign: 'center' }}>{permiso.monitoreo?.lecturaPeriodica?.lel || ''}</td>
+          </tr>
+          <tr>
+            <td style={{ border: '1px solid #000', padding: '3px' }}>Sulfhídrico (H2S)</td>
+            <td style={{ border: '1px solid #000', padding: '3px', textAlign: 'center' }}>{permiso.monitoreo?.lecturaInicial?.h2s || ''}</td>
+            <td style={{ border: '1px solid #000', padding: '3px', textAlign: 'center' }}>{permiso.monitoreo?.lecturaPeriodica?.h2s || ''}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      {/* --- 6. FIRMAS DE APROBACIÓN --- */}
+      <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', marginBottom: '8px', fontSize: '9px' }}>
+        <thead>
           <tr style={{ backgroundColor: '#E0E0E0' }}>
-            <th style={{ border: '1px solid #000', padding: '4px' }}>GAS</th>
-            <th style={{ border: '1px solid #000', padding: '4px' }}>VMP</th>
-            <th style={{ border: '1px solid #000', padding: '4px' }}>REGISTRO INICIAL</th>
-            <th style={{ border: '1px solid #000', padding: '4px' }}>SEGUIMIENTO DEL MONITOREO CONTINUO</th>
+            <th colSpan={4} style={{ border: '1px solid #000', padding: '2px 4px', textAlign: 'left', fontSize: '10px' }}>6. FIRMAS DE APROBACIÓN</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style={{ height: '60px' }}>
+            <td style={{ width: '25%', border: '1px solid #000', padding: '0' }}>
+              <SignatureBoxSmall aprobacion={solicitante} rol="SOLICITANTE" />
+            </td>
+            <td style={{ width: '25%', border: '1px solid #000', padding: '0' }}>
+              <SignatureBoxSmall aprobacion={trabajador} rol="TRABAJADOR" />
+            </td>
+            <td style={{ width: '25%', border: '1px solid #000', padding: '0' }}>
+              <SignatureBoxSmall aprobacion={hseq} rol="APROBADOR HSEQ" />
+            </td>
+            <td style={{ width: '25%', border: '1px solid #000', padding: '0' }}>
+              <SignatureBoxSmall aprobacion={area} rol="APROBADOR ÁREA" />
+            </td>
+          </tr>
+          <tr style={{ height: '60px' }}>
+            <td colSpan={4} style={{ border: '1px solid #000', padding: '0' }}>
+              <SignatureBoxSmall aprobacion={medico} rol="APTITUD MÉDICA (SI APLICA)" />
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      {/* --- 7. TERMINACIÓN --- */}
+      <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', marginBottom: '8px', fontSize: '9px' }}>
+        <thead>
+          <tr style={{ backgroundColor: '#E0E0E0' }}>
+            <th colSpan={2} style={{ border: '1px solid #000', padding: '2px 4px', textAlign: 'left', fontSize: '10px' }}>7. TERMINACIÓN DEL PERMISO DE TRABAJO</th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td style={{ border: '1px solid #000', padding: '4px' }}>Oxígeno (O2)</td>
-            <td style={{ border: '1px solid #000', padding: '4px' }}>19.5% - 22%</td>
-            <td style={{ border: '1px solid #000', padding: '4px' }}>{permiso.monitoreo?.lecturaInicial?.o2 || ''}</td>
-            <td style={{ border: '1px solid #000', padding: '4px' }}>{permiso.monitoreo?.lecturaPeriodica?.o2 || ''}</td>
+            <td colSpan={2} style={{ border: '1px solid #000', padding: '4px' }}>
+              <strong>TRABAJO CONCLUIDO:</strong> {permiso.estado === 'CERRADO' ? '[X] SÍ  [ ] NO' : '[ ] SÍ  [ ] NO'} 
+              <span style={{ marginLeft: '20px' }}><strong>FECHA DE CULMINACIÓN:</strong> {permiso.estado === 'CERRADO' ? formatDateTime(permiso.fechaCaducidad) : '_________________'}</span>
+            </td>
+          </tr>
+          <tr style={{ height: '60px' }}>
+            <td style={{ width: '50%', border: '1px solid #000', padding: '0' }}>
+              <SignatureBoxSmall aprobacion={liderCierre} rol="LÍDER / RESIDENTE (CIERRE)" />
+            </td>
+            <td style={{ width: '50%', border: '1px solid #000', padding: '0' }}>
+              <SignatureBoxSmall aprobacion={null} rol="RESPONSABLE HSEQ (ARCHIVO)" />
+            </td>
           </tr>
           <tr>
-            <td style={{ border: '1px solid #000', padding: '4px' }}>Monóxido de Carbono (CO)</td>
-            <td style={{ border: '1px solid #000', padding: '4px' }}>25 ppm</td>
-            <td style={{ border: '1px solid #000', padding: '4px' }}>{permiso.monitoreo?.lecturaInicial?.co || ''}</td>
-            <td style={{ border: '1px solid #000', padding: '4px' }}>{permiso.monitoreo?.lecturaPeriodica?.co || ''}</td>
-          </tr>
-          <tr>
-            <td style={{ border: '1px solid #000', padding: '4px' }}>% LEL</td>
-            <td style={{ border: '1px solid #000', padding: '4px' }}>{"< 5%"}</td>
-            <td style={{ border: '1px solid #000', padding: '4px' }}>{permiso.monitoreo?.lecturaInicial?.lel || ''}</td>
-            <td style={{ border: '1px solid #000', padding: '4px' }}>{permiso.monitoreo?.lecturaPeriodica?.lel || ''}</td>
-          </tr>
-          <tr>
-            <td style={{ border: '1px solid #000', padding: '4px' }}>Ácido Sulfhídrico (H2S)</td>
-            <td style={{ border: '1px solid #000', padding: '4px' }}>10 ppm</td>
-            <td style={{ border: '1px solid #000', padding: '4px' }}>{permiso.monitoreo?.lecturaInicial?.h2s || ''}</td>
-            <td style={{ border: '1px solid #000', padding: '4px' }}>{permiso.monitoreo?.lecturaPeriodica?.h2s || ''}</td>
+            <td colSpan={2} style={{ border: '1px solid #000', padding: '4px', minHeight: '30px', verticalAlign: 'top' }}>
+              <strong>OBSERVACIONES:</strong> {permiso.observacionesCierre || 'SIN NOVEDAD'}
+            </td>
           </tr>
         </tbody>
-      </table>
-      <div style={{ border: '1px solid #000', borderTop: 'none', marginBottom: '10px' }}>
-        <SignatureBox aprobacion={inspector} rol="Inspector Responsable (HSEQ)" />
-      </div>
-
-      <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', marginBottom: '10px' }}>
-        <thead>
-          <tr style={{ backgroundColor: '#E0E0E0' }}>
-            <th colSpan={4} style={{ border: '1px solid #000', padding: '4px', textAlign: 'left', fontSize: '12px' }}>6. FIRMAS DE APROBACIÓN</th>
-          </tr>
-        </thead>
-        <tbody>
-            <tr>
-              <td style={{ width: '25%', border: '1px solid #000' }}><SignatureBox aprobacion={solicitante} rol="Solicitante" /></td>
-              <td style={{ width: '25%', border: '1px solid #000' }}><SignatureBox aprobacion={trabajador} rol="Trabajador" /></td>
-              <td style={{ width: '25%', border: '1px solid #000' }}><SignatureBox aprobacion={hseq} rol="Aprobador HSEQ" /></td>
-              <td style={{ width: '25%', border: '1px solid #000' }}><SignatureBox aprobacion={area} rol="Aprobador Área" /></td>
-            </tr>
-            <tr>
-              <td colSpan={4} style={{ border: '1px solid #000' }}><SignatureBox aprobacion={medico} rol="Aptitud Médica" /></td>
-            </tr>
-        </tbody>
-      </table>
-      
-      <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000', marginBottom: '10px' }}>
-        <thead>
-          <tr style={{ backgroundColor: '#E0E0E0' }}>
-            <th colSpan={2} style={{ border: '1px solid #000', padding: '4px', textAlign: 'left', fontSize: '12px' }}>7. TERMINACIÓN DEL PERMISO DE TRABAJO</th>
-          </tr>
-        </thead>
-         <tbody>
-            <tr>
-              <td style={{ width: '50%', border: '1x solid #000' }}><SignatureBox aprobacion={lider} rol="Líder / Residente (Cierre)" /></td>
-              <td style={{ width: '50%', border: '1px solid #000' }}><SignatureBox aprobacion={null} rol="Responsable HSEQ (Archivo)" /></td>
-            </tr>
-            <tr>
-              <td colSpan={2} style={{ border: '1px solid #000', padding: '5px', fontSize: '10px' }}>
-                <strong>Observaciones:</strong>
-                <div style={{ minHeight: '30px' }}>
-                  {permiso.observacionesCierre || ''}
-                </div>
-              </td>
-            </tr>
-          </tbody>
       </table>
 
     </div>
