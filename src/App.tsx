@@ -55,7 +55,7 @@ function AppContent() {
       */}
       <div className="flex relative" style={{ minHeight: 'calc(100vh - 64px)' }}>
         <Sidebar />
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto w-full lg:w-auto">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto w-full lg:w-auto lg:max-h-[calc(100vh-4rem)]">
           <Router>
             <Home path="/" />
             

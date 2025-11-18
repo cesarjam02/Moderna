@@ -45,7 +45,7 @@ export function Sidebar() {
       {/* Sidebar */}
       <aside
         className={`
-          fixed lg:static inset-y-0 left-0 z-40
+          fixed lg:sticky lg:top-16 inset-y-0 left-0 z-40
           w-64 lg:w-56
           border-r border-gray-700
           bg-gray-800
@@ -53,6 +53,7 @@ export function Sidebar() {
           transition-transform duration-300 ease-in-out
           p-4
           overflow-y-auto
+          h-screen lg:h-[calc(100vh-4rem)]
         `}
       >
         <nav>
