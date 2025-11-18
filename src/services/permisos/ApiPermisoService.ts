@@ -53,4 +53,15 @@ export class ApiPermisoService implements PermisoService {
   completarMonitoreo(id: string): Promise<Permiso> {
     return http<Permiso>(`${P_BASE}/${id}/monitoreo`, { method: 'POST' });
   }
+
+  async descargarPDF(id: string): Promise<Blob> {
+    const response = await fetch(`${P_BASE}/${id}/descargar`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
+      },
+    });
+    if (!response.ok) throw new Error('Error al descargar el permiso');
+    return response.blob();
+  }
 }

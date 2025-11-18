@@ -28,8 +28,8 @@ export interface Permiso {
 
   // Flujo de Aprobaciones
   aprobaciones: Aprobacion[]; // Las 4 firmas principales (Solicitante, HSEQ, etc.)
-  aprobacionMedica: Aprobacion; // Firma de la Doctora (Requerimiento #9)
-  monitoreo: Aprobacion; // Firma del Inspector (Requerimiento #7)
+  aprobacionMedica: Aprobacion | null; // Firma de la Doctora (Requerimiento #9)
+  monitoreo: Aprobacion | null; // Firma del Inspector (solo si ESPACIOS_CONFINADOS)
 }
 
 /** Define el estado actual del permiso en su ciclo de vida. (Requerimiento #2) */
@@ -71,7 +71,9 @@ export interface AnalisisTrabajoSeguro {
 /** Representa a una persona (interna o externa) que participará en el trabajo. */
 export interface PersonalAutorizado {
   id: string; // Puede ser un ID de User o un DNI/cédula
-  nombre: string;
+  nombres: string;
+  apellidos: string;
+  cedula: string;
   tipo: 'INTERNO' | 'EXTERNO';
 }
 
@@ -80,7 +82,7 @@ export interface PersonalAutorizado {
  */
 export interface Documento {
   id: string;
-  tipo: 'CEDULA' | 'ANTECEDENTES' | 'INDUCCION_HSE' | 'IESS' | 'HERRAMIENTAS_IPT';
+  tipo: 'CEDULA' | 'ANTECEDENTES' | 'INDUCCION_HSE' | 'IESS' | 'HERRAMIENTAS_IPT' | 'APTITUD_MEDICA' | 'CERTIFICADO_ALTURA' | 'CERTIFICADO_IZAJE';
   nombreArchivo: string;
   url: string; // URL al archivo almacenado (ej. S3, Firebase Storage)
 }
@@ -119,6 +121,6 @@ export interface CreatePermisoDTO {
   // ATS
   ats: AnalisisTrabajoSeguro;
 
-  // Documentos (para externos)
-  documentos: Array<{ tipo: Documento['tipo'], file: File }>; // Se usa 'File' para la subida
+  // Documentos (asociados a cada persona autorizada)
+  documentos: Array<{ tipo: Documento['tipo'], file: File, personalId: string }>; // Se usa 'File' para la subida
 }

@@ -44,11 +44,25 @@ export function usePermiso(id: string | null) {
     return updated;
   }, [id, detailState.refetch, detailState.setData]);
 
+  const descargarPDF = useCallback(async () => {
+    if (!id) return;
+    const blob = await Services.permisos.descargarPDF(id);
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `permiso-${id}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  }, [id]);
+
   return {
     ...detailState,
     firmarPermiso,
     firmarAptitudMedica,
     aplazarPermiso,
     completarMonitoreo,
+    descargarPDF,
   };
 }

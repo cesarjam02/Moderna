@@ -1,6 +1,7 @@
 import { FunctionalComponent } from 'preact';
 import { useState } from 'preact/hooks';
 import { route } from 'preact-router';
+import { useAuth } from '@/contexts/AuthContext';
 import { usePermisos } from '@/hooks/usePermisos';
 import { Permiso } from '@/types';
 import { Button } from '@/components/UI/Button';
@@ -9,8 +10,12 @@ import { Badge } from '@/components/UI/Badge';
 import { Tag } from '@/components/UI/Tag';
 
 export const PermisosPage: FunctionalComponent<{ path?: string }> = () => {
+  const { hasAnyRole } = useAuth();
   const [filtros, setFiltros] = useState({});
   const { data: permisos, loading, error } = usePermisos(filtros);
+  
+  // Solo estos roles pueden crear permisos
+  const puedeCrearPermiso = hasAnyRole(['admin', 'SOLICITANTE', 'user']);
 
   const handleFiltroChange = (e: Event) => {
     const { name, value } = e.target as HTMLInputElement;
@@ -24,12 +29,14 @@ export const PermisosPage: FunctionalComponent<{ path?: string }> = () => {
           <h1 className="text-3xl font-bold">Permisos de Trabajo</h1>
           <p className="text-gray-400">Moderna Alimentos S.A.</p>
         </div>
-        <Button
-          onClick={() => route('/permisos/nuevo')}
-          className="bg-rojo-moderna text-white hover:bg-rojo-moderna-dark"
-        >
-          + Nuevo Permiso
-        </Button>
+        {puedeCrearPermiso && (
+          <Button
+            onClick={() => route('/permisos/nuevo')}
+            className="bg-rojo-moderna text-white hover:bg-rojo-moderna-dark"
+          >
+            + Nuevo Permiso
+          </Button>
+        )}
       </div>
 
       <div className="flex gap-4 mb-6 p-4 bg-gray-800 rounded-lg border border-gray-700">
@@ -56,7 +63,7 @@ const PermisoCard: FunctionalComponent<{ permiso: Permiso }> = ({ permiso }) => 
     if (p.aprobacionMedica?.estado === 'PENDIENTE') return `Firma pendiente: ${p.aprobacionMedica.rolFirmante}`;
     const proximaFirma = p.aprobaciones.find(a => a.estado === 'PENDIENTE');
     if (proximaFirma) return `Firma pendiente: ${proximaFirma.rolFirmante}`;
-    if (p.estado === 'ACTIVO' && p.monitoreo.estado === 'PENDIENTE') return `Firma pendiente: ${p.monitoreo.rolFirmante}`;
+    if (p.estado === 'ACTIVO' && p.monitoreo?.estado === 'PENDIENTE') return `Firma pendiente: ${p.monitoreo.rolFirmante}`;
     return 'Revisión final';
   };
 

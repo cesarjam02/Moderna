@@ -51,6 +51,9 @@ export class MockPermisoService implements PermisoService {
       ['FRIO', 'IZAJES', 'EXCAVACIONES'].includes(t)
     );
 
+    // Solo crear monitoreo si se seleccionó ESPACIOS_CONFINADOS
+    const tieneEspaciosConfinados = input.tiposTrabajo.includes('ESPACIOS_CONFINADOS');
+
     const nuevoPermiso: Permiso = {
       id: crypto.randomUUID(),
       numero: numero,
@@ -71,7 +74,7 @@ export class MockPermisoService implements PermisoService {
       aprobacionMedica: necesitaAptitudMedica 
         ? createAprobacion('DOCTORA') 
         : null,
-      monitoreo: createAprobacion('INSPECTOR'),
+      monitoreo: tieneEspaciosConfinados ? createAprobacion('INSPECTOR') : null,
     };
 
     MOCK_PERMISOS.push(nuevoPermiso);
@@ -133,6 +136,7 @@ export class MockPermisoService implements PermisoService {
     const permiso = MOCK_PERMISOS.find(p => p.id === id);
     if (!permiso) throw new Error('Permiso no encontrado');
     if (permiso.estado !== 'ACTIVO') throw new Error('El permiso debe estar activo');
+    if (!permiso.monitoreo) throw new Error('Este permiso no requiere monitoreo continuo');
     
     permiso.monitoreo.estado = 'FIRMADO';
     permiso.monitoreo.fechaFirma = new Date().toISOString();
@@ -140,5 +144,23 @@ export class MockPermisoService implements PermisoService {
     permiso.estado = 'CERRADO';
     
     return JSON.parse(JSON.stringify(permiso));
+  }
+
+  async descargarPDF(id: string): Promise<Blob> {
+    await new Promise(res => setTimeout(res, 300));
+    const permiso = MOCK_PERMISOS.find(p => p.id === id);
+    if (!permiso) throw new Error('Permiso no encontrado');
+    
+    // Verificar que todas las aprobaciones principales estén firmadas
+    const todasFirmadas = permiso.aprobaciones.every(a => a.estado === 'FIRMADO');
+    const aptitudMedicaFirmada = !permiso.aprobacionMedica || permiso.aprobacionMedica.estado === 'FIRMADO';
+    
+    if (!todasFirmadas || !aptitudMedicaFirmada) {
+      throw new Error('El permiso debe estar completamente aprobado para descargarlo');
+    }
+    
+    // Simular generación de PDF
+    const pdfContent = `PERMISO DE TRABAJO N° ${permiso.numero}\n\n${JSON.stringify(permiso, null, 2)}`;
+    return new Blob([pdfContent], { type: 'application/pdf' });
   }
 }

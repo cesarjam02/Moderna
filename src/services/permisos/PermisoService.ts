@@ -10,4 +10,5 @@ export interface PermisoService {
   firmarAptitudMedica(id: string): Promise<Permiso>;
   aplazar(id: string, motivo: string): Promise<Permiso>;
   completarMonitoreo(id: string): Promise<Permiso>;
+  descargarPDF(id: string): Promise<Blob>;
 }

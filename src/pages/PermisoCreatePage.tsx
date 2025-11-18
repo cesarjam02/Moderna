@@ -13,6 +13,34 @@ const TIPOS_TRABAJO_OPTIONS: TipoTrabajo[] = ['FRIO', 'CALIENTE', 'ALTURAS', 'ES
 const DOCUMENTOS_EXTERNOS: Documento['tipo'][] = ['CEDULA', 'ANTECEDENTES', 'INDUCCION_HSE', 'IESS'];
 const DOCUMENTOS_FRIO: Documento['tipo'][] = ['HERRAMIENTAS_IPT'];
 
+// --- Mapeo de Departamentos a Áreas ---
+const AREAS_POR_DEPARTAMENTO: Record<Departamento, string[]> = {
+  LOGISTICA: ['BODEGA 1', 'BODEGA 2', 'BODEGA 3', 'BODEGA 4', 'BODEGA 5', 'BODEGA 6', 'AREA DE DESPACHO', 'BASCULA', 'OFICINA', 'OTROS'],
+  PRODUCCION: ['EMPAQUE DE AVENA', 'EMPAQUE DE HARINA', 'MOLINO', 'OFICINA', 'OTROS'],
+  ADMINISTRACION: ['OFICINA', 'BAÑOS', 'COMEDOR', 'OTROS'],
+  CALIDAD: ['LABORATORIO', 'EMPAQUE DE AVENA', 'EMPAQUE DE HARINA', 'MOLINO', 'LOGISTICA', 'OTROS'],
+  HSE: [
+    // Todas las áreas únicas de todos los departamentos
+    'BODEGA 1', 
+    'BODEGA 2', 
+    'BODEGA 3', 
+    'BODEGA 4', 
+    'BODEGA 5', 
+    'BODEGA 6', 
+    'AREA DE DESPACHO', 
+    'BASCULA', 
+    'OFICINA', 
+    'EMPAQUE DE AVENA', 
+    'EMPAQUE DE HARINA', 
+    'MOLINO', 
+    'BAÑOS', 
+    'COMEDOR', 
+    'LABORATORIO', 
+    'LOGISTICA', 
+    'OTROS'
+  ]
+};
+
 // --- Clases de Tailwind Reutilizables ---
 const formSectionClass = "p-6 bg-gray-800 rounded-lg border border-gray-700 space-y-4";
 const formLabelClass = "block text-sm font-medium text-gray-300 mb-1";
@@ -119,7 +147,7 @@ export const PermisoCreatePage: FunctionalComponent<{ path?: string }> = () => {
   const step2Validation = validateStep2(formData);
 
   return (
-    <div className="max-w-4xl mx-auto p-8">
+    <div className="max-w-4xl mx-auto">
       <h1 className="text-3xl font-bold mb-6">Crear Nuevo Permiso de Trabajo</h1>
       
       {validationErrors.length > 0 && (
@@ -188,12 +216,21 @@ export const PermisoCreatePage: FunctionalComponent<{ path?: string }> = () => {
 
 // --- Step 1 Component ---
 const Step1InfoGeneral = ({ formData, setFormData, onFieldChange }) => {
-  const [newPersonalName, setNewPersonalName] = useState('');
+  const [newPersonalNombres, setNewPersonalNombres] = useState('');
+  const [newPersonalApellidos, setNewPersonalApellidos] = useState('');
+  const [newPersonalCedula, setNewPersonalCedula] = useState('');
   const [newPersonalType, setNewPersonalType] = useState<'INTERNO' | 'EXTERNO'>('INTERNO');
 
   const handleInput = (e: Event) => {
     const { name, value } = e.target as HTMLInputElement;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData(prev => {
+      const updated = { ...prev, [name]: value };
+      // Si cambia el departamento, limpiar el área y actualizar las opciones disponibles
+      if (name === 'departamento') {
+        updated.area = '';
+      }
+      return updated;
+    });
     onFieldChange?.();
   };
 
@@ -225,25 +262,55 @@ const Step1InfoGeneral = ({ formData, setFormData, onFieldChange }) => {
   };
 
   const handleAddPersonal = () => {
-    if (!newPersonalName) return;
-    const newPersonal: PersonalAutorizado = { id: crypto.randomUUID(), nombre: newPersonalName, tipo: newPersonalType };
+    if (!newPersonalNombres || !newPersonalApellidos || !newPersonalCedula || newPersonalCedula.length !== 10) return;
+    const newPersonal: PersonalAutorizado = { 
+      id: crypto.randomUUID(), 
+      nombres: newPersonalNombres, 
+      apellidos: newPersonalApellidos,
+      cedula: newPersonalCedula,
+      tipo: newPersonalType 
+    };
     setFormData(prev => ({ ...prev, personalAutorizado: [...prev.personalAutorizado, newPersonal] }));
-    setNewPersonalName('');
+    setNewPersonalNombres('');
+    setNewPersonalApellidos('');
+    setNewPersonalCedula('');
     onFieldChange?.();
   };
 
-  const handleFileChange = (e: Event, tipoDoc: Documento['tipo']) => {
+  const handleCedulaInput = (e: Event) => {
+    const value = (e.target as HTMLInputElement).value;
+    // Solo permitir números y máximo 10 caracteres
+    const numericValue = value.replace(/\D/g, '').slice(0, 10);
+    setNewPersonalCedula(numericValue);
+  };
+
+  const handleFileChange = (e: Event, tipoDoc: Documento['tipo'], personalId: string) => {
     const file = (e.target as HTMLInputElement).files?.[0];
     if (!file) return;
     setFormData(prev => ({
       ...prev,
-      documentos: [...prev.documentos.filter(d => d.tipo !== tipoDoc), { tipo: tipoDoc, file: file }]
+      documentos: [
+        ...prev.documentos.filter(d => !(d.personalId === personalId && d.tipo === tipoDoc)), 
+        { tipo: tipoDoc, file: file, personalId: personalId }
+      ]
     }));
   };
 
-  const hasExternos = formData.personalAutorizado.some(p => p.tipo === 'EXTERNO');
-  const needsMedica = !formData.tiposTrabajo.some(t => ['FRIO', 'IZAJES', 'EXCAVACIONES'].includes(t));
+  const handleRemovePersonal = (id: string) => {
+    setFormData(prev => ({
+      ...prev,
+      personalAutorizado: prev.personalAutorizado.filter(p => p.id !== id),
+      documentos: prev.documentos.filter(d => d.personalId !== id)
+    }));
+    onFieldChange?.();
+  };
+
+  // Para EXTERNO: solo necesita aptitud médica si tiene ALTURAS, ESPACIOS_CONFINADOS o QUIMICOS
+  const needsMedicaExterno = formData.tiposTrabajo.some(t => ['ALTURAS', 'ESPACIOS_CONFINADOS', 'QUIMICOS'].includes(t));
+  // Para INTERNO: siempre necesita aptitud médica
   const needsIPT = formData.tiposTrabajo.includes('FRIO');
+  const needsAltura = formData.tiposTrabajo.includes('ALTURAS');
+  const needsIzaje = formData.tiposTrabajo.includes('IZAJES');
 
   return (
     <div className="space-y-6">
@@ -283,7 +350,19 @@ const Step1InfoGeneral = ({ formData, setFormData, onFieldChange }) => {
             <span className={formLabelClass}>
               Área <span className="text-red-400">*</span>
             </span>
-            <Input name="area" value={formData.area} onInput={handleInput} required />
+            <select 
+              name="area" 
+              value={formData.area || ''} 
+              onInput={handleInput} 
+              className={formSelectClass} 
+              required
+              disabled={!formData.departamento}
+            >
+              <option value="">{formData.departamento ? 'Seleccione un área...' : 'Primero seleccione un departamento'}</option>
+              {formData.departamento && AREAS_POR_DEPARTAMENTO[formData.departamento]?.map(area => (
+                <option key={area} value={area}>{area}</option>
+              ))}
+            </select>
           </label>
           <label className="block">
             <span className={formLabelClass}>
@@ -313,30 +392,147 @@ const Step1InfoGeneral = ({ formData, setFormData, onFieldChange }) => {
           Personal Autorizado <span className="text-red-400">*</span>
         </h3>
         {formData.personalAutorizado.map(p => (
-          <div key={p.id} className="py-2 px-3 bg-gray-700 rounded text-sm">{p.nombre} ({p.tipo})</div>
+          <div key={p.id} className="flex items-center justify-between py-2 px-3 bg-gray-700 rounded text-sm">
+            <span>{p.nombres} {p.apellidos} - C.I.: {p.cedula} ({p.tipo})</span>
+            <Button 
+              type="button" 
+              onClick={() => handleRemovePersonal(p.id)} 
+              className="!py-1 !px-2 bg-red-600 text-white hover:bg-red-500 text-xs"
+            >
+              Eliminar
+            </Button>
+          </div>
         ))}
-        <div className="flex gap-2">
-          <Input value={newPersonalName} onInput={(e) => setNewPersonalName((e.target as HTMLInputElement).value)} placeholder="Nombre de trabajador" />
-          <select value={newPersonalType} onInput={(e) => setNewPersonalType((e.target as HTMLInputElement).value as any)} className={formSelectClass}>
-            <option value="INTERNO">INTERNO</option>
-            <option value="EXTERNO">EXTERNO</option>
-          </select>
-          <Button type="button" onClick={handleAddPersonal} className="bg-gray-600 text-white hover:bg-gray-500 whitespace-nowrap">+ Añadir</Button>
+        <div className="space-y-2">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+            <Input 
+              value={newPersonalNombres} 
+              onInput={(e) => setNewPersonalNombres((e.target as HTMLInputElement).value)} 
+              placeholder="Nombres" 
+              required
+            />
+            <Input 
+              value={newPersonalApellidos} 
+              onInput={(e) => setNewPersonalApellidos((e.target as HTMLInputElement).value)} 
+              placeholder="Apellidos" 
+              required
+            />
+            <Input 
+              value={newPersonalCedula} 
+              onInput={handleCedulaInput}
+              placeholder="Cédula (10 dígitos)" 
+              required
+              maxLength={10}
+              type="text"
+            />
+          </div>
+          <div className="flex gap-2 items-end">
+            <div className="flex-1">
+              <label className="block">
+                <span className={formLabelClass}>Tipo</span>
+                <select 
+                  value={newPersonalType} 
+                  onInput={(e) => setNewPersonalType((e.target as HTMLInputElement).value as any)} 
+                  className={formSelectClass}
+                >
+                  <option value="INTERNO">INTERNO</option>
+                  <option value="EXTERNO">EXTERNO</option>
+                </select>
+              </label>
+            </div>
+            <Button 
+              type="button" 
+              onClick={handleAddPersonal} 
+              className="bg-gray-600 text-white hover:bg-gray-500 whitespace-nowrap h-[42px]"
+              disabled={!newPersonalNombres || !newPersonalApellidos || !newPersonalCedula || newPersonalCedula.length !== 10}
+            >
+              + Añadir
+            </Button>
+          </div>
+          {newPersonalCedula && newPersonalCedula.length !== 10 && (
+            <p className="text-sm text-red-400">La cédula debe tener exactamente 10 dígitos</p>
+          )}
         </div>
       </div>
 
-      {(hasExternos || needsMedica || needsIPT) && (
-        <div className="p-6 bg-yellow-500/10 rounded-lg border border-yellow-500/30 space-y-3">
-          <h3 className="text-lg font-semibold text-yellow-300">Documentos Requeridos</h3>
-          {needsMedica && (
-            <FileInput label="Certificado de Aptitud Médica" tipo="APTITUD_MEDICA" onChange={handleFileChange} />
-          )}
-          {hasExternos && DOCUMENTOS_EXTERNOS.map(tipo => (
-            <FileInput key={tipo} label={tipo} tipo={tipo} onChange={handleFileChange} />
-          ))}
-          {needsIPT && (
-            <FileInput label="Listado Herramientas IPT" tipo="HERRAMIENTAS_IPT" onChange={handleFileChange} />
-          )}
+      {formData.personalAutorizado.length > 0 && (
+        <div className="space-y-4">
+          {formData.personalAutorizado.map(personal => {
+            const documentosPersona = formData.documentos.filter(d => d.personalId === personal.id);
+            const esInterno = personal.tipo === 'INTERNO';
+            const esExterno = personal.tipo === 'EXTERNO';
+            
+            return (
+              <div key={personal.id} className="p-6 bg-yellow-500/10 rounded-lg border border-yellow-500/30 space-y-3">
+                <h3 className="text-lg font-semibold text-yellow-300">
+                  Documentos Requeridos para {personal.nombres} {personal.apellidos} ({personal.tipo})
+                </h3>
+                
+                {/* Documentos para INTERNO */}
+                {esInterno && (
+                  <FileInput 
+                    label="Certificado de Aptitud Médica" 
+                    tipo="APTITUD_MEDICA" 
+                    personalId={personal.id}
+                    onChange={handleFileChange}
+                    fileSelected={documentosPersona.some(d => d.tipo === 'APTITUD_MEDICA')}
+                  />
+                )}
+                
+                {/* Documentos para EXTERNO */}
+                {esExterno && (
+                  <>
+                    {needsMedicaExterno && (
+                      <FileInput 
+                        label="Certificado de Aptitud Médica" 
+                        tipo="APTITUD_MEDICA" 
+                        personalId={personal.id}
+                        onChange={handleFileChange}
+                        fileSelected={documentosPersona.some(d => d.tipo === 'APTITUD_MEDICA')}
+                      />
+                    )}
+                    {DOCUMENTOS_EXTERNOS.map(tipo => (
+                      <FileInput 
+                        key={tipo} 
+                        label={tipo} 
+                        tipo={tipo} 
+                        personalId={personal.id}
+                        onChange={handleFileChange}
+                        fileSelected={documentosPersona.some(d => d.tipo === tipo)}
+                      />
+                    ))}
+                    {needsIPT && (
+                      <FileInput 
+                        label="Listado Herramientas IPT" 
+                        tipo="HERRAMIENTAS_IPT" 
+                        personalId={personal.id}
+                        onChange={handleFileChange}
+                        fileSelected={documentosPersona.some(d => d.tipo === 'HERRAMIENTAS_IPT')}
+                      />
+                    )}
+                    {needsAltura && (
+                      <FileInput 
+                        label="Certificado de Altura" 
+                        tipo="CERTIFICADO_ALTURA" 
+                        personalId={personal.id}
+                        onChange={handleFileChange}
+                        fileSelected={documentosPersona.some(d => d.tipo === 'CERTIFICADO_ALTURA')}
+                      />
+                    )}
+                    {needsIzaje && (
+                      <FileInput 
+                        label="Certificado de Izaje" 
+                        tipo="CERTIFICADO_IZAJE" 
+                        personalId={personal.id}
+                        onChange={handleFileChange}
+                        fileSelected={documentosPersona.some(d => d.tipo === 'CERTIFICADO_IZAJE')}
+                      />
+                    )}
+                  </>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
@@ -485,9 +681,11 @@ const CheckboxList = ({ title, items, checkedItems, onChange }) => (
 );
 
 // --- File Input Sub-Component ---
-const FileInput = ({ label, tipo, onChange }) => (
+const FileInput = ({ label, tipo, personalId, onChange, fileSelected }) => (
   <label className="block">
-    <span className={`${formLabelClass} !text-yellow-300`}>{label}</span>
-    <Input type="file" onChange={(e) => onChange(e, tipo)} className="!bg-gray-700" />
+    <span className={`${formLabelClass} !text-yellow-300`}>
+      {label} {fileSelected && <span className="text-green-400">✓</span>}
+    </span>
+    <Input type="file" onChange={(e) => onChange(e, tipo, personalId)} className="!bg-gray-700" />
   </label>
 );
