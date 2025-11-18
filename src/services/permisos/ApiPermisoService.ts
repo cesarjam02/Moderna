@@ -1,5 +1,5 @@
 import { http } from '@/services/http';
-import { CreatePermisoDTO, Permiso } from '@/types';
+import { CreatePermisoDTO, Permiso, LecturaGases } from '@/types';
 import type { PermisoService } from './PermisoService';
 
 const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000/api';
@@ -17,10 +17,6 @@ export class ApiPermisoService implements PermisoService {
 
   create(input: CreatePermisoDTO): Promise<Permiso> {
     const formData = new FormData();
-
-    // NOTE: REQ #8. We must send FormData for files.
-    // This assumes your 'http.ts' will be modified to detect FormData
-    // and NOT stringify the body or set 'Content-Type: application/json'.
     
     const dataDto = { ...input, documentos: undefined };
     formData.append('data', JSON.stringify(dataDto));
@@ -35,12 +31,18 @@ export class ApiPermisoService implements PermisoService {
     });
   }
 
-  firmar(id: string): Promise<Permiso> {
-    return http<Permiso>(`${P_BASE}/${id}/firmar`, { method: 'POST' });
+  firmar(id: string, firmaUrl: string): Promise<Permiso> {
+    return http<Permiso>(`${P_BASE}/${id}/firmar`, { 
+      method: 'POST',
+      body: { firmaUrl } 
+    });
   }
 
-  firmarAptitudMedica(id: string): Promise<Permiso> {
-    return http<Permiso>(`${P_BASE}/${id}/firmar-medico`, { method: 'POST' });
+  firmarAptitudMedica(id: string, firmaUrl: string): Promise<Permiso> {
+    return http<Permiso>(`${P_BASE}/${id}/firmar-medico`, { 
+      method: 'POST',
+      body: { firmaUrl }
+    });
   }
 
   aplazar(id: string, motivo: string): Promise<Permiso> {
@@ -50,18 +52,17 @@ export class ApiPermisoService implements PermisoService {
     });
   }
 
-  completarMonitoreo(id: string): Promise<Permiso> {
-    return http<Permiso>(`${P_BASE}/${id}/monitoreo`, { method: 'POST' });
+  completarMonitoreo(id: string, firmaUrl: string, lecturaInicial: LecturaGases, lecturaPeriodica: LecturaGases | null): Promise<Permiso> {
+    return http<Permiso>(`${P_BASE}/${id}/monitoreo`, { 
+      method: 'POST',
+      body: { firmaUrl, lecturaInicial, lecturaPeriodica }
+    });
   }
 
-  async descargarPDF(id: string): Promise<Blob> {
-    const response = await fetch(`${P_BASE}/${id}/descargar`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token') || ''}`,
-      },
+  cerrarPermiso(id: string, observaciones: string, firmaUrl: string): Promise<Permiso> {
+    return http<Permiso>(`${P_BASE}/${id}/cerrar`, { 
+      method: 'POST',
+      body: { observaciones, firmaUrl }
     });
-    if (!response.ok) throw new Error('Error al descargar el permiso');
-    return response.blob();
   }
 }

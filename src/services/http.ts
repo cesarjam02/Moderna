@@ -11,25 +11,30 @@ export async function http<T>(url: string, options: HttpOptions = {}): Promise<T
 
   const isFormData = body instanceof FormData;
 
-  // NOTE: Do not stringify body or set Content-Type if it's FormData
-  const requestBody = isFormData ? (body as FormData) : JSON.stringify(body);
-  
   const requestHeaders = isFormData
-    ? headers // Let the browser set Content-Type for FormData
+    ? headers
     : {
         'Content-Type': 'application/json',
         ...headers,
       };
 
+  const fetchOptions: RequestInit = {
+    method,
+    headers: requestHeaders,
+  };
+
+  if (method !== 'GET' && method !== 'HEAD') {
+    if (isFormData) {
+      fetchOptions.body = body as FormData;
+    } else if (body != null) {
+      fetchOptions.body = JSON.stringify(body);
+    }
+  }
+
   try {
-    const res = await fetch(url, {
-      method,
-      headers: requestHeaders,
-      body: method !== 'GET' ? requestBody : undefined,
-    });
-    
+    const res = await fetch(url, fetchOptions);
+
     if (!res.ok) {
-      // Intentar obtener el mensaje de error del cuerpo de la respuesta
       let errorMessage = `HTTP ${res.status} - ${res.statusText}`;
       try {
         const errorData = await res.json();
@@ -39,23 +44,25 @@ export async function http<T>(url: string, options: HttpOptions = {}): Promise<T
           errorMessage = errorData.error;
         }
       } catch {
-        // Si no se puede parsear el JSON, usar el mensaje por defecto
+        // No hay cuerpo JSON o no se pudo parsear, se usa el mensaje de estado
       }
       throw new Error(errorMessage);
     }
-    
+
+    if (res.status === 204) {
+      return Promise.resolve(null as T);
+    }
+
     return res.json() as Promise<T>;
   } catch (error) {
-    // Capturar errores de red (failed to fetch, CORS, etc.)
     if (error instanceof TypeError && error.message.includes('fetch')) {
       throw new Error(
         `No se pudo conectar con el servidor. Verifica que:\n` +
-        `1. El servidor backend esté corriendo\n` +
-        `2. La URL de la API sea correcta (${url})\n` +
-        `3. No haya problemas de CORS`
+        `1. El backend esté corriendo.\n` +
+        `2. La URL de VITE_API_URL (${import.meta.env.VITE_API_URL}) sea correcta.\n` +
+        `3. No haya problemas de CORS.`
       );
     }
-    // Re-lanzar otros errores
     throw error;
   }
 }

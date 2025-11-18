@@ -1,11 +1,8 @@
-import { CreatePermisoDTO, Permiso, UserRole, Aprobacion } from '@/types';
+import { CreatePermisoDTO, Permiso, UserRole, Aprobacion, LecturaGases } from '@/types';
 import type { PermisoService } from './PermisoService';
 
-// --- Base de datos simulada ---
 const MOCK_PERMISOS: Permiso[] = [];
 let nextId = 1;
-
-// --- Helpers de simulación ---
 
 const createAprobacion = (rol: UserRole): Aprobacion => ({
   id: crypto.randomUUID(),
@@ -17,8 +14,6 @@ const getNextRolToSign = (permiso: Permiso): UserRole | null => {
   const next = permiso.aprobaciones.find(a => a.estado === 'PENDIENTE');
   return next?.rolFirmante ?? null;
 };
-
-// --- Servicio Mock ---
 
 export class MockPermisoService implements PermisoService {
   async list(filtros: any): Promise<Permiso[]> {
@@ -35,132 +30,146 @@ export class MockPermisoService implements PermisoService {
 
   async create(input: CreatePermisoDTO): Promise<Permiso> {
     await new Promise(res => setTimeout(res, 500));
-    
-    const numero = String(nextId++).padStart(6, '0');
-    
-    // Simula la cadena de aprobación
-    const aprobaciones: Aprobacion[] = [
-      createAprobacion('SOLICITANTE'),
-      ...input.personalAutorizado.map(() => createAprobacion('TRABAJADOR')),
-      createAprobacion('APROBADOR_HSEQ'),
-      createAprobacion('APROBADOR_AREA'),
-    ];
 
-    // Simula la aprobación médica condicional (Req #9)
-    const necesitaAptitudMedica = !input.tiposTrabajo.some(t => 
-      ['FRIO', 'IZAJES', 'EXCAVACIONES'].includes(t)
-    );
+    const solicitanteId = 'u2'; 
+    const solicitanteNombre = 'Jorge (Solicitante)';
 
-    // Solo crear monitoreo si se seleccionó ESPACIOS_CONFINADOS
-    const tieneEspaciosConfinados = input.tiposTrabajo.includes('ESPACIOS_CONFINADOS');
-
-    const nuevoPermiso: Permiso = {
-      id: crypto.randomUUID(),
-      numero: numero,
+    const newPermiso: Permiso = {
+      id: String(nextId++),
+      numero: `P-${String(nextId).padStart(5, '0')}`,
       estado: 'PENDIENTE',
-      solicitanteId: 'user-solicitante-mock-id', // Asumido
+      solicitanteId: solicitanteId,
+      solicitante: { id: solicitanteId, nombre: solicitanteNombre },
       fechaSolicitud: new Date().toISOString(),
       ...input,
-      
-      // Simula subida de archivos (Req #8)
+      ats: {
+        id: crypto.randomUUID(),
+        ...input.ats
+      },
       documentos: input.documentos.map(d => ({
         id: crypto.randomUUID(),
         tipo: d.tipo,
         nombreArchivo: d.file.name,
-        url: `/mock/uploads/${d.file.name}`,
+        url: URL.createObjectURL(d.file), 
       })),
-      
-      aprobaciones,
-      aprobacionMedica: necesitaAptitudMedica 
-        ? createAprobacion('DOCTORA') 
-        : null,
-      monitoreo: tieneEspaciosConfinados ? createAprobacion('INSPECTOR') : null,
+      aprobaciones: [
+        createAprobacion('SOLICITANTE'),
+        createAprobacion('TRABAJADOR'),
+        createAprobacion('APROBADOR_HSEQ'),
+        createAprobacion('APROBADOR_AREA'),
+      ],
+      aprobacionMedica: input.tiposTrabajo.includes('ALTURAS') ? createAprobacion('DOCTORA') : null,
+      monitoreo: input.tiposTrabajo.includes('ESPACIOS_CONFINADOS') ? { ...createAprobacion('INSPECTOR') } : null,
     };
 
-    MOCK_PERMISOS.push(nuevoPermiso);
-    return JSON.parse(JSON.stringify(nuevoPermiso));
+    MOCK_PERMISOS.push(newPermiso);
+    return JSON.parse(JSON.stringify(newPermiso));
   }
 
-  async firmar(id: string): Promise<Permiso> {
+  async firmar(id: string, firmaUrl: string): Promise<Permiso> {
     await new Promise(res => setTimeout(res, 400));
     const permiso = MOCK_PERMISOS.find(p => p.id === id);
     if (!permiso) throw new Error('Permiso no encontrado');
 
-    const nextRol = getNextRolToSign(permiso);
-    if (!nextRol) throw new Error('No hay más firmas pendientes');
+    const nextRole = getNextRolToSign(permiso);
+    if (!nextRole) throw new Error('No hay aprobaciones pendientes');
 
-    const aprobacion = permiso.aprobaciones.find(
-      a => a.rolFirmante === nextRol && a.estado === 'PENDIENTE'
-    );
-    
+    const aprobacion = permiso.aprobaciones.find(a => a.rolFirmante === nextRole);
     if (aprobacion) {
       aprobacion.estado = 'FIRMADO';
       aprobacion.fechaFirma = new Date().toISOString();
-      aprobacion.usuarioFirma = { id: 'mock-user-id', nombre: 'Usuario Mock' };
-    }
-
-    // Si ya no quedan firmas, activar permiso
-    if (!getNextRolToSign(permiso)) {
-      permiso.estado = 'ACTIVO';
+      aprobacion.usuarioFirma = { id: `mock-${nextRole}-id`, nombre: `Firma ${nextRole}` };
+      aprobacion.firmaUrl = firmaUrl;
     }
     
+    const allSigned = permiso.aprobaciones.every(a => a.estado === 'FIRMADO');
+    const medSigned = !permiso.aprobacionMedica || permiso.aprobacionMedica.estado === 'FIRMADO';
+    const monSigned = !permiso.monitoreo || permiso.monitoreo.estado === 'FIRMADO';
+    
+    if(allSigned && medSigned && monSigned) {
+      permiso.estado = 'ACTIVO';
+    }
+
     return JSON.parse(JSON.stringify(permiso));
   }
 
-  async firmarAptitudMedica(id: string): Promise<Permiso> {
+  async firmarAptitudMedica(id: string, firmaUrl: string): Promise<Permiso> {
     await new Promise(res => setTimeout(res, 400));
     const permiso = MOCK_PERMISOS.find(p => p.id === id);
     if (!permiso) throw new Error('Permiso no encontrado');
-    if (!permiso.aprobacionMedica) throw new Error('Este permiso no requiere aptitud médica');
-    
+    if (!permiso.aprobacionMedica) throw new Error('Este permiso no requiere aprobación médica');
+
     permiso.aprobacionMedica.estado = 'FIRMADO';
     permiso.aprobacionMedica.fechaFirma = new Date().toISOString();
     permiso.aprobacionMedica.usuarioFirma = { id: 'mock-doctora-id', nombre: 'Doctora Mock' };
-    
+    permiso.aprobacionMedica.firmaUrl = firmaUrl;
+
+    const allSigned = permiso.aprobaciones.every(a => a.estado === 'FIRMADO');
+    const monSigned = !permiso.monitoreo || permiso.monitoreo.estado === 'FIRMADO';
+
+    if(allSigned && monSigned) {
+      permiso.estado = 'ACTIVO';
+    }
+
     return JSON.parse(JSON.stringify(permiso));
   }
 
   async aplazar(id: string, motivo: string): Promise<Permiso> {
-    await new Promise(res => setTimeout(res, 300));
-    const permiso = MOCK_PERMISOS.find(p => p.id === id);
-    if (!permiso) throw new Error('Permiso no encontrado');
-    
-    permiso.estado = 'APLAZADO';
-    // En una app real, guardaríamos el 'motivo' en algún lado.
-    
-    return JSON.parse(JSON.stringify(permiso));
-  }
-
-  async completarMonitoreo(id: string): Promise<Permiso> {
     await new Promise(res => setTimeout(res, 400));
     const permiso = MOCK_PERMISOS.find(p => p.id === id);
     if (!permiso) throw new Error('Permiso no encontrado');
-    if (permiso.estado !== 'ACTIVO') throw new Error('El permiso debe estar activo');
-    if (!permiso.monitoreo) throw new Error('Este permiso no requiere monitoreo continuo');
-    
-    permiso.monitoreo.estado = 'FIRMADO';
-    permiso.monitoreo.fechaFirma = new Date().toISOString();
-    permiso.monitoreo.usuarioFirma = { id: 'mock-inspector-id', nombre: 'Inspector Mock' };
-    permiso.estado = 'CERRADO';
-    
+    permiso.estado = 'APLAZADO';
     return JSON.parse(JSON.stringify(permiso));
   }
 
-  async descargarPDF(id: string): Promise<Blob> {
-    await new Promise(res => setTimeout(res, 300));
+  async completarMonitoreo(id: string, firmaUrl: string, lecturaInicial: LecturaGases, lecturaPeriodica: LecturaGases | null): Promise<Permiso> {
+    await new Promise(res => setTimeout(res, 400));
+    const permiso = MOCK_PERMISOS.find(p => p.id === id);
+    if (!permiso) throw new Error('Permiso no encontrado');
+    if (!permiso.monitoreo) throw new Error('Este permiso no requiere monitoreo');
+
+    permiso.monitoreo.estado = 'FIRMADO';
+    permiso.monitoreo.fechaFirma = new Date().toISOString();
+    permiso.monitoreo.usuarioFirma = { id: 'mock-inspector-id', nombre: 'Inspector Mock' };
+    permiso.monitoreo.firmaUrl = firmaUrl;
+    permiso.monitoreo.lecturaInicial = lecturaInicial;
+    permiso.monitoreo.lecturaPeriodica = lecturaPeriodica || undefined;
+
+    const allSigned = permiso.aprobaciones.every(a => a.estado === 'FIRMADO');
+    const medSigned = !permiso.aprobacionMedica || permiso.aprobacionMedica.estado === 'FIRMADO';
+    
+    if(allSigned && medSigned) {
+      permiso.estado = 'ACTIVO';
+    }
+
+    return JSON.parse(JSON.stringify(permiso));
+  }
+
+  async cerrarPermiso(id: string, observaciones: string, firmaUrl: string): Promise<Permiso> {
+    await new Promise(res => setTimeout(res, 400));
     const permiso = MOCK_PERMISOS.find(p => p.id === id);
     if (!permiso) throw new Error('Permiso no encontrado');
     
-    // Verificar que todas las aprobaciones principales estén firmadas
-    const todasFirmadas = permiso.aprobaciones.every(a => a.estado === 'FIRMADO');
-    const aptitudMedicaFirmada = !permiso.aprobacionMedica || permiso.aprobacionMedica.estado === 'FIRMADO';
+    permiso.estado = 'CERRADO';
+    permiso.observacionesCierre = observaciones;
     
-    if (!todasFirmadas || !aptitudMedicaFirmada) {
-      throw new Error('El permiso debe estar completamente aprobado para descargarlo');
+    const liderAprobacion = permiso.aprobaciones.find(a => a.rolFirmante === 'LIDER');
+    if (liderAprobacion) {
+        liderAprobacion.estado = 'FIRMADO';
+        liderAprobacion.fechaFirma = new Date().toISOString();
+        liderAprobacion.usuarioFirma = { id: 'mock-lider-id', nombre: 'Lider Cierre Mock' };
+        liderAprobacion.firmaUrl = firmaUrl;
+    } else {
+        permiso.aprobaciones.push({
+          id: crypto.randomUUID(),
+          rolFirmante: 'LIDER',
+          estado: 'FIRMADO',
+          fechaFirma: new Date().toISOString(),
+          usuarioFirma: { id: 'mock-lider-id', nombre: 'Lider Cierre Mock' },
+          firmaUrl: firmaUrl,
+        });
     }
-    
-    // Simular generación de PDF
-    const pdfContent = `PERMISO DE TRABAJO N° ${permiso.numero}\n\n${JSON.stringify(permiso, null, 2)}`;
-    return new Blob([pdfContent], { type: 'application/pdf' });
+
+    return JSON.parse(JSON.stringify(permiso));
   }
 }

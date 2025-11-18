@@ -1,6 +1,6 @@
 import { useCallback } from 'preact/hooks';
 import { Services } from '@/services';
-import { Permiso } from '@/types';
+import { Permiso, LecturaGases } from '@/types';
 import { useAsync } from './useAsync';
 
 export function usePermiso(id: string | null) {
@@ -9,17 +9,17 @@ export function usePermiso(id: string | null) {
     [id]
   );
 
-  const firmarPermiso = useCallback(async () => {
+  const firmarPermiso = useCallback(async (firmaUrl: string) => {
     if (!id) return;
-    const updated = await Services.permisos.firmar(id);
-    detailState.setData(updated); // Optimistic update
+    const updated = await Services.permisos.firmar(id, firmaUrl);
+    detailState.setData(updated);
     await detailState.refetch();
     return updated;
   }, [id, detailState.refetch, detailState.setData]);
 
-  const firmarAptitudMedica = useCallback(async () => {
+  const firmarAptitudMedica = useCallback(async (firmaUrl: string) => {
     if (!id) return;
-    const updated = await Services.permisos.firmarAptitudMedica(id);
+    const updated = await Services.permisos.firmarAptitudMedica(id, firmaUrl);
     detailState.setData(updated);
     await detailState.refetch();
     return updated;
@@ -36,26 +36,26 @@ export function usePermiso(id: string | null) {
     [id, detailState.refetch, detailState.setData]
   );
 
-  const completarMonitoreo = useCallback(async () => {
+  const completarMonitoreo = useCallback(async (
+    firmaUrl: string, 
+    lecturaInicial: LecturaGases, 
+    lecturaPeriodica: LecturaGases | null
+  ) => {
     if (!id) return;
-    const updated = await Services.permisos.completarMonitoreo(id);
+    const updated = await Services.permisos.completarMonitoreo(id, firmaUrl, lecturaInicial, lecturaPeriodica);
     detailState.setData(updated);
     await detailState.refetch();
     return updated;
   }, [id, detailState.refetch, detailState.setData]);
 
-  const descargarPDF = useCallback(async () => {
+  const cerrarPermiso = useCallback(async (observaciones: string, firmaUrl: string) => {
     if (!id) return;
-    const blob = await Services.permisos.descargarPDF(id);
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `permiso-${id}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
-  }, [id]);
+    const updated = await Services.permisos.cerrarPermiso(id, observaciones, firmaUrl);
+    detailState.setData(updated);
+    await detailState.refetch();
+    return updated;
+  }, [id, detailState.refetch, detailState.setData]);
+
 
   return {
     ...detailState,
@@ -63,6 +63,6 @@ export function usePermiso(id: string | null) {
     firmarAptitudMedica,
     aplazarPermiso,
     completarMonitoreo,
-    descargarPDF,
+    cerrarPermiso
   };
 }

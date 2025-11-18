@@ -2,22 +2,21 @@ import { FunctionalComponent } from 'preact';
 import { useState, useRef, useEffect } from 'preact/hooks';
 import { Button } from '@/components/UI/Button';
 
-interface SignatureModalProps {
+interface CloseModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (signatureDataUrl: string) => void;
-  title: string;
+  onConfirm: (observaciones: string, signatureDataUrl: string) => void;
 }
 
-export const SignatureModal: FunctionalComponent<SignatureModalProps> = ({ 
-  isOpen, 
-  onClose, 
-  onConfirm, 
-  title 
+export const CloseModal: FunctionalComponent<CloseModalProps> = ({
+  isOpen,
+  onClose,
+  onConfirm,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasSignature, setHasSignature] = useState(false);
+  const [observaciones, setObservaciones] = useState('');
 
   const getCtx = () => canvasRef.current?.getContext('2d');
 
@@ -64,11 +63,21 @@ export const SignatureModal: FunctionalComponent<SignatureModalProps> = ({
     }
   };
 
+  const resetForm = () => {
+    clearSignature();
+    setObservaciones('');
+  };
+
+  const handleClose = () => {
+    resetForm();
+    onClose();
+  };
+
   const handleConfirm = () => {
-    if (canvasRef.current) {
+    if (canvasRef.current && hasSignature) {
       const dataUrl = canvasRef.current.toDataURL('image/png');
-      onConfirm(dataUrl);
-      onClose();
+      onConfirm(observaciones, dataUrl);
+      handleClose();
     }
   };
 
@@ -84,7 +93,7 @@ export const SignatureModal: FunctionalComponent<SignatureModalProps> = ({
       }
     }
     if (!isOpen) {
-      clearSignature();
+      resetForm();
     }
   }, [isOpen]);
 
@@ -94,17 +103,30 @@ export const SignatureModal: FunctionalComponent<SignatureModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50"
-      onClick={onClose}
+      className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4"
+      onClick={handleClose}
     >
       <div
-        className="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-lg relative"
+        className="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-lg text-white"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-xl font-semibold mb-4 text-white">{title}</h2>
-        
+        <h2 className="text-xl font-semibold mb-4">Cerrar Permiso de Trabajo</h2>
+
         <div className="mb-4">
-          <p className="text-sm text-gray-400 mb-2">Firme en el área de abajo:</p>
+          <label className="block text-sm font-medium text-gray-300 mb-2" htmlFor="observaciones">
+            Observaciones de Cierre (Opcional)
+          </label>
+          <textarea
+            id="observaciones"
+            rows={3}
+            className="py-2 px-3 w-full rounded-md bg-gray-700 border border-gray-600 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-rojo-moderna focus:border-rojo-moderna"
+            value={observaciones}
+            onInput={(e) => setObservaciones((e.target as HTMLTextAreaElement).value)}
+          />
+        </div>
+
+        <div className="mb-4">
+          <p className="text-sm text-gray-400 mb-2">Firma del Líder/Residente (Obligatorio):</p>
           <div className="border-2 border-gray-600 rounded-lg bg-white p-2">
             <canvas
               ref={canvasRef}
@@ -129,20 +151,20 @@ export const SignatureModal: FunctionalComponent<SignatureModalProps> = ({
             className="bg-gray-600 text-white hover:bg-gray-500"
             disabled={!hasSignature}
           >
-            Limpiar
+            Limpiar Firma
           </Button>
           <Button
-            onClick={onClose}
+            onClick={handleClose}
             className="bg-gray-600 text-white hover:bg-gray-500"
           >
             Cancelar
           </Button>
           <Button
             onClick={handleConfirm}
-            className="bg-green-600 text-white hover:bg-green-500"
+            className="bg-red-600 text-white hover:bg-red-500 disabled:opacity-50"
             disabled={!hasSignature}
           >
-            Confirmar Firma
+            Cerrar Permiso
           </Button>
         </div>
       </div>

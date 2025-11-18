@@ -40,9 +40,9 @@ export const PermisosPage: FunctionalComponent<{ path?: string }> = () => {
       </div>
 
       <div className="flex gap-4 mb-6 p-4 bg-gray-800 rounded-lg border border-gray-700">
-        <Input name="fechaInicio" type="date" onInput={handleFiltroChange} />
-        <Input name="fechaFin" type="date" onInput={handleFiltroChange} />
-        <Input name="solicitante" onInput={handleFiltroChange} placeholder="Buscar por solicitante..." />
+        <input name="fechaInicio" type="date" onInput={handleFiltroChange} />
+        <input name="fechaFin" type="date" onInput={handleFiltroChange} />
+        <input name="solicitante" onInput={handleFiltroChange} placeholder="Buscar por solicitante..." />
       </div>
 
       {loading && <p>Cargando permisos...</p>}
@@ -97,9 +97,11 @@ const PermisoCard: FunctionalComponent<{ permiso: Permiso }> = ({ permiso }) => 
           </span>
         </div>
         <div className="flex gap-2">
-          <Button className="bg-gray-700 text-white hover:bg-gray-600">
-            Imprimir
-          </Button>
+          {permiso.estado === 'ACTIVO' && (
+            <Button className="bg-gray-700 text-white hover:bg-gray-600">
+              Imprimir
+            </Button>
+          )}
           <Button
             onClick={() => route(`/permisos/${permiso.id}`)}
             className="bg-rojo-moderna text-white hover:bg-rojo-moderna-dark"
