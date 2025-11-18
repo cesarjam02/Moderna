@@ -112,6 +112,11 @@ export const PermisoCreatePage: FunctionalComponent<{ path?: string }> = () => {
     const validation = validateStep1(formData);
     if (validation.isValid) {
       setValidationErrors([]);
+      // Asegurar que ats esté inicializado antes de pasar al paso 2
+      setFormData(prev => ({
+        ...prev,
+        ats: prev.ats || { cantidadPersonas: 1, tareas: [] }
+      }));
       setStep(2);
     } else {
       setValidationErrors(validation.errors);
@@ -541,31 +546,58 @@ const Step1InfoGeneral = ({ formData, setFormData, onFieldChange }) => {
 
 // --- Step 2 Component ---
 const Step2ATS = ({ formData, setFormData, onFieldChange }) => {
+  // Asegurar que ats esté inicializado
+  const ats = formData.ats || { cantidadPersonas: 1, tareas: [] };
+
   const handleAtsInput = (e: Event) => {
     const { name, value } = e.target as HTMLInputElement;
-    setFormData(prev => ({ ...prev, ats: { ...prev.ats, [name]: Number(value) } }));
+    setFormData(prev => {
+      const currentAts = prev.ats || { cantidadPersonas: 1, tareas: [] };
+      return { ...prev, ats: { ...currentAts, [name]: Number(value) } };
+    });
     onFieldChange?.();
   };
 
   const handleAddTask = () => {
     const newTask: TareaATS = { id: crypto.randomUUID(), descripcion: '', peligros: [], medidas: [] };
-    setFormData(prev => ({ ...prev, ats: { ...prev.ats, tareas: [...prev.ats.tareas, newTask] } }));
+    setFormData(prev => {
+      const currentAts = prev.ats || { cantidadPersonas: 1, tareas: [] };
+      return { 
+        ...prev, 
+        ats: { 
+          ...currentAts, 
+          tareas: [...(currentAts.tareas || []), newTask] 
+        } 
+      };
+    });
     onFieldChange?.();
   };
 
   const handleUpdateTask = (updatedTask: TareaATS) => {
-    setFormData(prev => ({
-      ...prev,
-      ats: { ...prev.ats, tareas: prev.ats.tareas.map(t => t.id === updatedTask.id ? updatedTask : t) }
-    }));
+    setFormData(prev => {
+      const currentAts = prev.ats || { cantidadPersonas: 1, tareas: [] };
+      return {
+        ...prev,
+        ats: { 
+          ...currentAts, 
+          tareas: (currentAts.tareas || []).map(t => t.id === updatedTask.id ? updatedTask : t) 
+        }
+      };
+    });
     onFieldChange?.();
   };
   
   const handleRemoveTask = (id: string) => {
-    setFormData(prev => ({
-      ...prev,
-      ats: { ...prev.ats, tareas: prev.ats.tareas.filter(t => t.id !== id) }
-    }));
+    setFormData(prev => {
+      const currentAts = prev.ats || { cantidadPersonas: 1, tareas: [] };
+      return {
+        ...prev,
+        ats: { 
+          ...currentAts, 
+          tareas: (currentAts.tareas || []).filter(t => t.id !== id) 
+        }
+      };
+    });
     onFieldChange?.();
   };
 
@@ -577,18 +609,33 @@ const Step2ATS = ({ formData, setFormData, onFieldChange }) => {
           <span className={formLabelClass}>
             Cantidad de Personas Expuestas <span className="text-red-400">*</span>
           </span>
-          <Input name="cantidadPersonas" type="number" min="1" value={formData.ats.cantidadPersonas} onInput={handleAtsInput} required />
+          <Input 
+            name="cantidadPersonas" 
+            type="number" 
+            min="1" 
+            value={ats.cantidadPersonas || 1} 
+            onInput={handleAtsInput} 
+            required 
+          />
         </label>
       </div>
       
-      {formData.ats.tareas.map((tarea, index) => (
+      {(ats.tareas || []).map((tarea, index) => (
         <TareaATSForm key={tarea.id} index={index} tarea={tarea} onUpdate={handleUpdateTask} onRemove={handleRemoveTask} />
       ))}
       <div className="space-y-2">
         <p className="text-sm text-gray-400">
           <span className="text-red-400">*</span> Debe agregar al menos una tarea con descripción, peligros y medidas
         </p>
-        <Button type="button" onClick={handleAddTask} className="w-full bg-gray-700 text-white hover:bg-gray-600">
+        <Button 
+          type="button" 
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleAddTask();
+          }} 
+          className="w-full bg-gray-700 text-white hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
           + Añadir Tarea
         </Button>
       </div>
@@ -666,7 +713,7 @@ const TareaATSForm = ({ index, tarea, onUpdate, onRemove }) => {
 };
 
 // --- Checkbox List Sub-Component ---
-const checkboxList = ({ title, items, checkedItems, onChange }) => (
+const CheckboxList = ({ title, items, checkedItems, onChange }) => (
   <div className="border border-gray-700 rounded-lg p-4">
     <h4 className="font-semibold text-white mb-3">{title}</h4>
     <div className="max-h-56 overflow-y-auto space-y-2 pr-2">
