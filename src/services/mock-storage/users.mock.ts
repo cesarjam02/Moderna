@@ -17,6 +17,7 @@ const initialUsers: UserWithPassword[] = [
     email: 'ana@example.com',
     password: 'admin123',
     role: 'admin',
+    roles: ['admin', 'SOLICITANTE'], // Admin puede actuar como SOLICITANTE
     active: true,
     createdAt: new Date().toISOString(),
   },
@@ -26,6 +27,7 @@ const initialUsers: UserWithPassword[] = [
     email: 'jorge@example.com',
     password: 'user123',
     role: 'SOLICITANTE',
+    roles: ['SOLICITANTE'],
     active: true,
     createdAt: new Date().toISOString(),
   },
@@ -35,6 +37,7 @@ const initialUsers: UserWithPassword[] = [
     email: 'wilson@example.com',
     password: 'user123',
     role: 'APROBADOR_HSEQ',
+    roles: ['APROBADOR_HSEQ'],
     active: true,
     createdAt: new Date().toISOString(),
   },
@@ -44,6 +47,7 @@ const initialUsers: UserWithPassword[] = [
     email: 'nelson@example.com',
     password: 'user123',
     role: 'APROBADOR_AREA',
+    roles: ['APROBADOR_AREA'],
     active: true,
     createdAt: new Date().toISOString(),
   },
@@ -53,6 +57,7 @@ const initialUsers: UserWithPassword[] = [
     email: 'medica@example.com',
     password: 'user123',
     role: 'DOCTORA',
+    roles: ['DOCTORA'],
     active: true,
     createdAt: new Date().toISOString(),
   },
@@ -62,6 +67,7 @@ const initialUsers: UserWithPassword[] = [
     email: 'inspector@example.com',
     password: 'user123',
     role: 'INSPECTOR',
+    roles: ['INSPECTOR'],
     active: true,
     createdAt: new Date().toISOString(),
   },
@@ -71,6 +77,7 @@ const initialUsers: UserWithPassword[] = [
     email: 'lider@example.com',
     password: 'user123',
     role: 'LIDER',
+    roles: ['LIDER'],
     active: true,
     createdAt: new Date().toISOString(),
   },
@@ -80,6 +87,7 @@ const initialUsers: UserWithPassword[] = [
     email: 'maria@example.com',
     password: 'user123',
     role: 'TRABAJADOR',
+    roles: ['TRABAJADOR'],
     active: true,
     createdAt: new Date().toISOString(),
   },
@@ -130,7 +138,12 @@ export const MockUsersStorage = {
   update(id: string, updates: Partial<UserWithPassword>): void {
     const index = usersWithPasswords.findIndex((u) => u.id === id);
     if (index !== -1) {
-      usersWithPasswords[index] = { ...usersWithPasswords[index], ...updates };
+      const updated = { ...usersWithPasswords[index], ...updates };
+      // Asegurar que siempre tenga roles
+      if (!updated.roles || updated.roles.length === 0) {
+        updated.roles = [updated.role];
+      }
+      usersWithPasswords[index] = updated;
     }
   },
 
@@ -147,7 +160,10 @@ export const MockUsersStorage = {
    * Obtiene solo los usuarios (sin contraseñas) para compatibilidad
    */
   getUsers(): User[] {
-    return usersWithPasswords.map(({ password, ...user }) => user);
+    return usersWithPasswords.map(({ password, ...user }) => ({
+      ...user,
+      roles: user.roles || [user.role], // Asegurar que siempre tenga roles
+    }));
   },
 
   /**

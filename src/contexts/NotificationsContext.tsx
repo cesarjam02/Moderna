@@ -24,16 +24,23 @@ interface NotificationsContextType {
 
 const NotificationsContext = createContext<NotificationsContextType | null>(null);
 
-const canSign = (permiso: Permiso, userRole: UserRole, userId?: string): boolean => {
-  // Buscar la primera aprobación pendiente en el orden correcto
-  const nextPendingApproval = permiso.aprobaciones.find(a => a.estado === 'PENDIENTE');
-  if (!nextPendingApproval) {
-    return false;
+// Helper para verificar si un usuario tiene un rol específico
+const hasRole = (userRole: UserRole, userRoles: UserRole[] | undefined, targetRole: UserRole): boolean => {
+  // Si tiene roles múltiples, verificar en el array
+  if (userRoles && Array.isArray(userRoles) && userRoles.length > 0) {
+    if (userRoles.includes(targetRole)) return true;
   }
+  // Verificar el rol principal
+  return userRole === targetRole;
+};
+
+const canSign = (permiso: Permiso, userRole: UserRole, userRoles: UserRole[] | undefined, userId?: string): boolean => {
+  const nextPendingApproval = permiso.aprobaciones.find(a => a.estado === 'PENDIENTE');
+  if (!nextPendingApproval) return false;
   
   // Si la próxima aprobación es SOLICITANTE, solo el solicitante específico puede firmar
   if (nextPendingApproval.rolFirmante === 'SOLICITANTE') {
-    return userRole === 'SOLICITANTE' && userId === permiso.solicitanteId;
+    return hasRole(userRole, userRoles, 'SOLICITANTE') && userId === permiso.solicitanteId;
   }
   
   // Para otros roles, verificar que el SOLICITANTE ya haya firmado
@@ -42,29 +49,29 @@ const canSign = (permiso: Permiso, userRole: UserRole, userId?: string): boolean
     return false;
   }
   
-  // Verificar si el rol del usuario coincide con el rol que debe firmar
-  return nextPendingApproval.rolFirmante === userRole;
+  // Verificar si el usuario tiene el rol necesario
+  return hasRole(userRole, userRoles, nextPendingApproval.rolFirmante);
 };
 
-const canSignMedico = (permiso: Permiso, userRole: UserRole): boolean => {
-  return userRole === 'DOCTORA' &&
+const canSignMedico = (permiso: Permiso, userRole: UserRole, userRoles: UserRole[] | undefined): boolean => {
+  return hasRole(userRole, userRoles, 'DOCTORA') &&
          !!permiso.aprobacionMedica &&
          permiso.aprobacionMedica.estado === 'PENDIENTE';
 };
 
-const canMonitor = (permiso: Permiso, userRole: UserRole): boolean => {
+const canMonitor = (permiso: Permiso, userRole: UserRole, userRoles: UserRole[] | undefined): boolean => {
   const allMainApprovalsDone = permiso.aprobaciones
     .filter(a => a.rolFirmante !== 'LIDER')
     .every(a => a.estado === 'FIRMADO');
 
-  return userRole === 'INSPECTOR' &&
+  return hasRole(userRole, userRoles, 'INSPECTOR') &&
          !!permiso.monitoreo &&
          permiso.monitoreo.estado === 'PENDIENTE' &&
          allMainApprovalsDone;
 };
 
-const canClose = (permiso: Permiso, userRole: UserRole): boolean => {
-  return userRole === 'LIDER' &&
+const canClose = (permiso: Permiso, userRole: UserRole, userRoles: UserRole[] | undefined): boolean => {
+  return hasRole(userRole, userRoles, 'LIDER') &&
          permiso.estado === 'ACTIVO' &&
          !permiso.aprobaciones.find(a => a.rolFirmante === 'LIDER' && a.estado === 'FIRMADO');
 };
@@ -101,12 +108,14 @@ export function NotificationsProvider({ children }: { children: preact.Component
     }
 
     const userRole = user.role as UserRole;
+    // Asegurar que userRoles sea un array válido o undefined
+    const userRoles = (user.roles && Array.isArray(user.roles) && user.roles.length > 0) ? user.roles : undefined;
     const userId = user.id;
     const notifs: Notification[] = [];
 
     permisos.forEach(permiso => {
       // Verificar si puede firmar aprobaciones principales
-      if (canSign(permiso, userRole, userId)) {
+      if (canSign(permiso, userRole, userRoles, userId)) {
         const nextApproval = permiso.aprobaciones.find(a => a.estado === 'PENDIENTE');
         notifs.push({
           id: `sign-${permiso.id}`,
@@ -120,7 +129,7 @@ export function NotificationsProvider({ children }: { children: preact.Component
       }
 
       // Verificar si puede firmar aprobación médica
-      if (canSignMedico(permiso, userRole)) {
+      if (canSignMedico(permiso, userRole, userRoles)) {
         notifs.push({
           id: `medico-${permiso.id}`,
           type: 'sign_medico',
@@ -133,7 +142,7 @@ export function NotificationsProvider({ children }: { children: preact.Component
       }
 
       // Verificar si puede monitorear
-      if (canMonitor(permiso, userRole)) {
+      if (canMonitor(permiso, userRole, userRoles)) {
         notifs.push({
           id: `monitor-${permiso.id}`,
           type: 'monitor',
@@ -146,7 +155,7 @@ export function NotificationsProvider({ children }: { children: preact.Component
       }
 
       // Verificar si puede cerrar
-      if (canClose(permiso, userRole)) {
+      if (canClose(permiso, userRole, userRoles)) {
         notifs.push({
           id: `close-${permiso.id}`,
           type: 'close',

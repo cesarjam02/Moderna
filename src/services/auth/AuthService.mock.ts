@@ -39,13 +39,18 @@ export class MockAuthService implements AuthService {
     }
 
     const { password, ...userWithoutPassword } = user;
+    // Asegurar que siempre tenga roles inicializados
+    const userWithRoles = {
+      ...userWithoutPassword,
+      roles: user.roles && user.roles.length > 0 ? user.roles : [user.role],
+    };
     const token = `mock-token-${user.id}-${Date.now()}`;
 
     localStorage.setItem('auth_token', token);
-    localStorage.setItem('auth_user', JSON.stringify(userWithoutPassword));
+    localStorage.setItem('auth_user', JSON.stringify(userWithRoles));
 
     return {
-      user: userWithoutPassword,
+      user: userWithRoles,
       token,
     };
   }
@@ -68,7 +73,12 @@ export class MockAuthService implements AuthService {
 
     try {
       const user = JSON.parse(userStr);
-      return { user, token };
+      // Asegurar que siempre tenga roles inicializados
+      const userWithRoles = {
+        ...user,
+        roles: user.roles && user.roles.length > 0 ? user.roles : [user.role],
+      };
+      return { user: userWithRoles, token };
     } catch {
       return null;
     }

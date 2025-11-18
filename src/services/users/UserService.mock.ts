@@ -11,7 +11,11 @@ export class MockUserService implements UserService {
     const user = MockUsersStorage.findById(id);
     if (!user) throw new Error('User not found');
     const { password, ...userWithoutPassword } = user;
-    return userWithoutPassword;
+    // Asegurar que siempre tenga roles
+    return {
+      ...userWithoutPassword,
+      roles: userWithoutPassword.roles || [userWithoutPassword.role],
+    };
   }
 
   async create(input: CreateUserDTO): Promise<User> {
@@ -30,6 +34,7 @@ export class MockUserService implements UserService {
       active: true,
       createdAt: new Date().toISOString(),
       role: input.role,
+      roles: input.roles || [input.role], // Usar roles proporcionados o solo el rol principal
       name: input.name.trim(),
       email: normalizedEmail,
       password: input.password, // Guardar la contraseña para que pueda hacer login
@@ -53,7 +58,28 @@ export class MockUserService implements UserService {
     // Obtener el usuario actualizado
     const updatedUser = MockUsersStorage.findById(id)!;
     const { password, ...userWithoutPassword } = updatedUser;
-    return userWithoutPassword;
+    // Asegurar que siempre tenga roles
+    const userWithRoles = {
+      ...userWithoutPassword,
+      roles: userWithoutPassword.roles || [userWithoutPassword.role],
+    };
+    
+    // Si el usuario actualizado es el que está logueado, actualizar localStorage
+    const currentUserStr = localStorage.getItem('auth_user');
+    if (currentUserStr) {
+      try {
+        const currentUser = JSON.parse(currentUserStr);
+        if (currentUser.id === id) {
+          localStorage.setItem('auth_user', JSON.stringify(userWithRoles));
+          // Disparar evento para que el AuthContext se actualice
+          window.dispatchEvent(new CustomEvent('user-updated'));
+        }
+      } catch (e) {
+        // Ignorar errores al actualizar localStorage
+      }
+    }
+    
+    return userWithRoles;
   }
 
   async remove(id: UserId): Promise<{ success: boolean }> {

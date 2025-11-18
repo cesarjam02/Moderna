@@ -17,13 +17,21 @@ import { CloseModal } from '@/components/Modals/CloseModal';
 
 const sectionClass = "p-6 bg-gray-800 rounded-lg border border-gray-700";
 
-const canSign = (permiso: Permiso, userRole: UserRole, userId?: string): Aprobacion | null => {
+// Helper para verificar si un usuario tiene un rol específico
+const hasRole = (user: { role: UserRole; roles?: UserRole[] }, role: UserRole): boolean => {
+  if (user.roles && user.roles.length > 0) {
+    return user.roles.includes(role);
+  }
+  return user.role === role;
+};
+
+const canSign = (permiso: Permiso, user: { role: UserRole; roles?: UserRole[]; id?: string }, userId?: string): Aprobacion | null => {
   const nextPendingApproval = permiso.aprobaciones.find(a => a.estado === 'PENDIENTE');
   if (!nextPendingApproval) return null;
   
   // Si la próxima aprobación es SOLICITANTE, solo el solicitante específico puede firmar
   if (nextPendingApproval.rolFirmante === 'SOLICITANTE') {
-    if (userRole === 'SOLICITANTE' && userId && userId === permiso.solicitanteId) {
+    if (hasRole(user, 'SOLICITANTE') && userId && userId === permiso.solicitanteId) {
       return nextPendingApproval;
     }
     return null;
@@ -35,33 +43,33 @@ const canSign = (permiso: Permiso, userRole: UserRole, userId?: string): Aprobac
     return null; // El solicitante debe firmar primero
   }
   
-  // Si el rol coincide, puede firmar
-  if (nextPendingApproval.rolFirmante === userRole) {
+  // Si el usuario tiene el rol necesario, puede firmar
+  if (hasRole(user, nextPendingApproval.rolFirmante)) {
     return nextPendingApproval;
   }
   
   return null;
 };
 
-const canSignMedico = (permiso: Permiso, userRole: UserRole): boolean => {
-  return userRole === 'DOCTORA' &&
+const canSignMedico = (permiso: Permiso, user: { role: UserRole; roles?: UserRole[] }): boolean => {
+  return hasRole(user, 'DOCTORA') &&
          !!permiso.aprobacionMedica &&
          permiso.aprobacionMedica.estado === 'PENDIENTE';
 };
 
-const canMonitor = (permiso: Permiso, userRole: UserRole): boolean => {
+const canMonitor = (permiso: Permiso, user: { role: UserRole; roles?: UserRole[] }): boolean => {
   const allMainApprovalsDone = permiso.aprobaciones
     .filter(a => a.rolFirmante !== 'LIDER')
     .every(a => a.estado === 'FIRMADO');
 
-  return userRole === 'INSPECTOR' &&
+  return hasRole(user, 'INSPECTOR') &&
          !!permiso.monitoreo &&
          permiso.monitoreo.estado === 'PENDIENTE' &&
          allMainApprovalsDone;
 };
 
-const canClose = (permiso: Permiso, userRole: UserRole): boolean => {
-  return userRole === 'LIDER' &&
+const canClose = (permiso: Permiso, user: { role: UserRole; roles?: UserRole[] }): boolean => {
+  return hasRole(user, 'LIDER') &&
          permiso.estado === 'ACTIVO' &&
          !permiso.aprobaciones.find(a => a.rolFirmante === 'LIDER' && a.estado === 'FIRMADO');
 };
@@ -109,9 +117,9 @@ export const PermisoDetailPage: FunctionalComponent<{ id: string }> = ({ id }) =
       // Verificar si puede firmar aprobaciones principales
       const nextPendingApproval = permiso.aprobaciones.find(a => a.estado === 'PENDIENTE');
       if (nextPendingApproval) {
-        if (nextPendingApproval.rolFirmante === 'SOLICITANTE' && userRole === 'SOLICITANTE' && userId === permiso.solicitanteId) {
+        if (nextPendingApproval.rolFirmante === 'SOLICITANTE' && hasRole(user, 'SOLICITANTE') && userId === permiso.solicitanteId) {
           markAsViewed(`sign-${permiso.id}`);
-        } else if (nextPendingApproval.rolFirmante === userRole) {
+        } else if (hasRole(user, nextPendingApproval.rolFirmante)) {
           const solicitanteAprobacion = permiso.aprobaciones.find(a => a.rolFirmante === 'SOLICITANTE');
           if (solicitanteAprobacion && solicitanteAprobacion.estado === 'FIRMADO') {
             markAsViewed(`sign-${permiso.id}`);
@@ -120,7 +128,7 @@ export const PermisoDetailPage: FunctionalComponent<{ id: string }> = ({ id }) =
       }
       
       // Verificar si puede firmar aprobación médica
-      if (userRole === 'DOCTORA' && permiso.aprobacionMedica && permiso.aprobacionMedica.estado === 'PENDIENTE') {
+      if (hasRole(user, 'DOCTORA') && permiso.aprobacionMedica && permiso.aprobacionMedica.estado === 'PENDIENTE') {
         markAsViewed(`medico-${permiso.id}`);
       }
       
@@ -128,30 +136,29 @@ export const PermisoDetailPage: FunctionalComponent<{ id: string }> = ({ id }) =
       const allMainApprovalsDone = permiso.aprobaciones
         .filter(a => a.rolFirmante !== 'LIDER')
         .every(a => a.estado === 'FIRMADO');
-      if (userRole === 'INSPECTOR' && permiso.monitoreo && permiso.monitoreo.estado === 'PENDIENTE' && allMainApprovalsDone) {
+      if (hasRole(user, 'INSPECTOR') && permiso.monitoreo && permiso.monitoreo.estado === 'PENDIENTE' && allMainApprovalsDone) {
         markAsViewed(`monitor-${permiso.id}`);
       }
       
       // Verificar si puede cerrar
-      if (userRole === 'LIDER' && permiso.estado === 'ACTIVO') {
+      if (hasRole(user, 'LIDER') && permiso.estado === 'ACTIVO') {
         const liderAprobacion = permiso.aprobaciones.find(a => a.rolFirmante === 'LIDER');
         if (!liderAprobacion || liderAprobacion.estado !== 'FIRMADO') {
           markAsViewed(`close-${permiso.id}`);
         }
       }
     }
-  }, [permiso?.id, user?.id, user?.role, markAsViewed]);
+  }, [permiso?.id, user?.id, user?.role, user?.roles, markAsViewed]);
 
   if (loading) return <p className="p-8">Cargando permiso...</p>;
   if (error) return <p className="p-8 text-red-400">Error: {error.message}</p>;
   if (!permiso) return <p className="p-8">Permiso no encontrado.</p>;
 
-  const userRole = user?.role as UserRole;
   const userId = user?.id;
-  const nextApproval = canSign(permiso, userRole, userId);
-  const userCanSignMedico = canSignMedico(permiso, userRole);
-  const userCanMonitor = canMonitor(permiso, userRole);
-  const userCanClose = canClose(permiso, userRole);
+  const nextApproval = user ? canSign(permiso, user, userId) : null;
+  const userCanSignMedico = user ? canSignMedico(permiso, user) : false;
+  const userCanMonitor = user ? canMonitor(permiso, user) : false;
+  const userCanClose = user ? canClose(permiso, user) : false;
 
   const puedeDescargar = permiso.estado === 'ACTIVO' || permiso.estado === 'CERRADO';
 

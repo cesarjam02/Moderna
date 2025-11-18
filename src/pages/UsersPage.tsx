@@ -16,7 +16,7 @@ export const UsersPage: FunctionalComponent<{ path?: string }> = () => {
     setEditingUser(user);
   };
 
-  const handleSave = async (id: string, updates: { name?: string; email?: string; role?: any; active?: boolean }) => {
+  const handleSave = async (id: string, updates: { name?: string; email?: string; role?: any; roles?: any[]; active?: boolean }) => {
     await update(id, updates);
     setEditingUser(null);
   };
@@ -44,6 +44,11 @@ export const UsersPage: FunctionalComponent<{ path?: string }> = () => {
                   <span className="text-gray-300 break-all">{u.email}</span>
                   <span className="hidden sm:inline">—</span>
                   <span className="font-semibold capitalize">{u.role}</span>
+                  {u.roles && u.roles.length > 1 && (
+                    <span className="text-xs text-blue-400 ml-1">
+                      (+{u.roles.length - 1} roles adicionales)
+                    </span>
+                  )}
                   {!u.active && <span className="text-xs text-red-400">(Inactivo)</span>}
                 </div>
               </div>

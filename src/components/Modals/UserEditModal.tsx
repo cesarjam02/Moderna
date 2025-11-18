@@ -21,7 +21,7 @@ const ROLES: UserRole[] = [
 interface UserEditModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (id: string, updates: { name?: string; email?: string; role?: UserRole; active?: boolean }) => Promise<void>;
+  onSave: (id: string, updates: { name?: string; email?: string; role?: UserRole; roles?: UserRole[]; active?: boolean }) => Promise<void>;
   user: User | null;
 }
 
@@ -34,6 +34,7 @@ export const UserEditModal: FunctionalComponent<UserEditModalProps> = ({
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<UserRole>('user');
+  const [selectedRoles, setSelectedRoles] = useState<UserRole[]>([]);
   const [active, setActive] = useState(true);
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState(false);
@@ -44,10 +45,29 @@ export const UserEditModal: FunctionalComponent<UserEditModalProps> = ({
       setName(user.name);
       setEmail(user.email);
       setRole(user.role);
+      setSelectedRoles(user.roles || [user.role]);
       setActive(user.active);
       setError('');
     }
   }, [isOpen, user]);
+
+  const handleRoleToggle = (roleToToggle: UserRole) => {
+    setSelectedRoles(prev => {
+      if (prev.includes(roleToToggle)) {
+        // Si se deselecciona el rol principal, mantenerlo como mínimo
+        if (roleToToggle === role && prev.length > 1) {
+          return prev.filter(r => r !== roleToToggle);
+        }
+        // No permitir deseleccionar si es el único rol
+        if (prev.length === 1) {
+          return prev;
+        }
+        return prev.filter(r => r !== roleToToggle);
+      } else {
+        return [...prev, roleToToggle];
+      }
+    });
+  };
 
   if (!isOpen || !user) {
     return null;
@@ -76,10 +96,16 @@ export const UserEditModal: FunctionalComponent<UserEditModalProps> = ({
     }
 
     try {
+      // Asegurar que el rol principal esté en los roles seleccionados
+      const finalRoles = selectedRoles.includes(role) 
+        ? selectedRoles 
+        : [role, ...selectedRoles.filter(r => r !== role)];
+      
       await onSave(user.id, {
         name: name.trim(),
         email: email.trim().toLowerCase(),
         role,
+        roles: finalRoles,
         active,
       });
       onClose();
@@ -135,11 +161,18 @@ export const UserEditModal: FunctionalComponent<UserEditModalProps> = ({
 
           <label className="block">
             <span className="block text-sm font-medium text-gray-300 mb-1">
-              Rol <span className="text-red-400">*</span>
+              Rol Principal <span className="text-red-400">*</span>
             </span>
             <select
               value={role}
-              onInput={(e: any) => setRole(e.currentTarget.value as UserRole)}
+              onInput={(e: any) => {
+                const newRole = e.currentTarget.value as UserRole;
+                setRole(newRole);
+                // Asegurar que el nuevo rol principal esté en los roles seleccionados
+                if (!selectedRoles.includes(newRole)) {
+                  setSelectedRoles([newRole, ...selectedRoles]);
+                }
+              }}
               className="w-full py-2 px-3 rounded-md bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-2 focus:ring-rojo-moderna"
               required
             >
@@ -149,6 +182,37 @@ export const UserEditModal: FunctionalComponent<UserEditModalProps> = ({
                 </option>
               ))}
             </select>
+          </label>
+
+          <label className="block">
+            <span className="block text-sm font-medium text-gray-300 mb-2">
+              Permisos y Roles Adicionales
+            </span>
+            <div className="bg-gray-700 rounded-lg p-4 border border-gray-600 max-h-64 overflow-y-auto">
+              <div className="space-y-2">
+                {ROLES.map((r) => (
+                  <label
+                    key={r}
+                    className="flex items-center gap-3 p-2 rounded hover:bg-gray-600 transition-colors cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedRoles.includes(r)}
+                      onChange={() => handleRoleToggle(r)}
+                      disabled={r === role && selectedRoles.length === 1}
+                      className="h-5 w-5 rounded text-rojo-moderna bg-gray-600 border-gray-500 focus:ring-rojo-moderna disabled:opacity-50 disabled:cursor-not-allowed"
+                    />
+                    <span className="text-sm text-gray-300 flex-1">
+                      {r}
+                      {r === role && <span className="ml-2 text-xs text-blue-400">(Principal)</span>}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <p className="mt-2 text-xs text-gray-400">
+              Selecciona los roles y permisos que este usuario puede tener. El rol principal determina el acceso por defecto.
+            </p>
           </label>
 
           <label className="flex items-center gap-3">

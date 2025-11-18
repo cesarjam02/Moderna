@@ -26,7 +26,8 @@ export interface User {
   id: UserId;
   name: string;
   email: string;
-  role: UserRole; // Actualizado para usar el nuevo tipo
+  role: UserRole; // Rol principal (para compatibilidad)
+  roles: UserRole[]; // Múltiples roles permitidos
   active: boolean;
   createdAt: string; // ISO date
 }
@@ -35,12 +36,14 @@ export interface CreateUserDTO {
   name: string;
   email: string;
   password: string;
-  role: UserRole; // Obligatorio
+  role: UserRole; // Rol principal (para compatibilidad)
+  roles?: UserRole[]; // Roles adicionales
 }
 
 export interface UpdateUserDTO {
   name?: string;
   email?: string;
-  role?: UserRole; // Actualizado
+  role?: UserRole; // Rol principal (para compatibilidad)
+  roles?: UserRole[]; // Roles adicionales
   active?: boolean;
 }

@@ -27,8 +27,15 @@ export function AuthProvider({ children }: { children: preact.ComponentChildren 
       try {
         const response = await Services.auth.getCurrentUser();
         if (response) {
+          // Asegurar que siempre tenga roles inicializados
+          const userWithRoles = {
+            ...response.user,
+            roles: response.user.roles && response.user.roles.length > 0 
+              ? response.user.roles 
+              : [response.user.role],
+          };
           setAuthState({
-            user: response.user,
+            user: userWithRoles,
             token: response.token,
             isAuthenticated: true,
           });
@@ -43,11 +50,47 @@ export function AuthProvider({ children }: { children: preact.ComponentChildren 
     loadUser();
   }, []);
 
+  // Escuchar eventos de actualización de usuario para refrescar el usuario logueado
+  useEffect(() => {
+    const handleUserUpdated = async () => {
+      try {
+        const response = await Services.auth.getCurrentUser();
+        if (response) {
+          // Asegurar que siempre tenga roles inicializados
+          const userWithRoles = {
+            ...response.user,
+            roles: response.user.roles && response.user.roles.length > 0 
+              ? response.user.roles 
+              : [response.user.role],
+          };
+          setAuthState(prev => ({
+            ...prev,
+            user: userWithRoles,
+          }));
+        }
+      } catch (error) {
+        console.error('Error al actualizar usuario:', error);
+      }
+    };
+    
+    window.addEventListener('user-updated', handleUserUpdated);
+    return () => {
+      window.removeEventListener('user-updated', handleUserUpdated);
+    };
+  }, []);
+
   const login = useCallback(async (credentials: LoginDTO) => {
     try {
       const response = await Services.auth.login(credentials);
+      // Asegurar que siempre tenga roles inicializados
+      const userWithRoles = {
+        ...response.user,
+        roles: response.user.roles && response.user.roles.length > 0 
+          ? response.user.roles 
+          : [response.user.role],
+      };
       setAuthState({
-        user: response.user,
+        user: userWithRoles,
         token: response.token,
         isAuthenticated: true,
       });
@@ -71,14 +114,24 @@ export function AuthProvider({ children }: { children: preact.ComponentChildren 
 
   const hasRole = useCallback(
     (role: User['role']) => {
-      return authState.user?.role === role;
+      if (!authState.user) return false;
+      // Verificar en roles múltiples si existen
+      if (authState.user.roles && authState.user.roles.length > 0) {
+        return authState.user.roles.includes(role);
+      }
+      return authState.user.role === role;
     },
     [authState.user]
   );
 
   const hasAnyRole = useCallback(
     (roles: User['role'][]) => {
-      return authState.user ? roles.includes(authState.user.role) : false;
+      if (!authState.user) return false;
+      // Verificar en roles múltiples si existen
+      if (authState.user.roles && authState.user.roles.length > 0) {
+        return roles.some(role => authState.user!.roles!.includes(role));
+      }
+      return roles.includes(authState.user.role);
     },
     [authState.user]
   );
