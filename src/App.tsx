@@ -1,5 +1,6 @@
 import { Router } from 'preact-router';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { NotificationsProvider } from '@/contexts/NotificationsContext';
 import { Layout } from '@/components/Layout/Container';
 import { Navbar } from '@/components/Layout/Navbar';
 import { Sidebar } from '@/components/Layout/Sidebar';
@@ -99,7 +100,9 @@ function AppContent() {
 export function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <NotificationsProvider>
+        <AppContent />
+      </NotificationsProvider>
     </AuthProvider>
   );
 }
