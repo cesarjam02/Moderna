@@ -165,14 +165,14 @@ export const PermisoDetailPage: FunctionalComponent<{ id: string }> = ({ id }) =
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-8 space-y-6">
+    <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6">
       
-      <div className={`${sectionClass} flex justify-between items-start`}>
-        <div>
-          <h1 className="text-3xl font-bold text-white mb-2">
+      <div className={`${sectionClass} flex flex-col sm:flex-row justify-between items-start gap-4`}>
+        <div className="flex-1">
+          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
             Permiso de Trabajo N° {permiso.numero}
           </h1>
-          <p className="text-gray-400">
+          <p className="text-gray-400 text-sm sm:text-base">
             Solicitado por: {permiso.solicitante.nombre}
           </p>
         </div>

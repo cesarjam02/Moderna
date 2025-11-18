@@ -52,9 +52,9 @@ function AppContent() {
         el sidebar y el main ocupen el resto de la pantalla 
         después del Navbar de 64px (h-16).
       */}
-      <div className="flex" style={{ minHeight: 'calc(100vh - 64px)' }}>
+      <div className="flex relative" style={{ minHeight: 'calc(100vh - 64px)' }}>
         <Sidebar />
-        <main className="flex-1 p-8 overflow-y-auto">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto w-full lg:w-auto">
           <Router>
             <Home path="/" />
             

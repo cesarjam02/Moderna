@@ -25,19 +25,19 @@ export const ConvenioModal: FunctionalComponent<ConvenioModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-2 sm:p-4"
       onClick={onClose}
     >
       <div
-        className="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col text-white"
+        className="bg-gray-800 p-4 sm:p-6 rounded-lg shadow-xl w-full max-w-4xl max-h-[95vh] sm:max-h-[90vh] flex flex-col text-white"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-2xl font-bold mb-4 text-center">
+        <h2 className="text-lg sm:text-xl lg:text-2xl font-bold mb-4 text-center">
           CONVENIO PRIVADO DE RESPONSABILIDAD CIVIL DERIVADA DE CONTRATOS DE TRABAJO
         </h2>
 
-        <div className="flex-1 overflow-y-auto mb-6 pr-2">
-          <div className="space-y-4 text-sm leading-relaxed">
+        <div className="flex-1 overflow-y-auto mb-4 sm:mb-6 pr-2">
+          <div className="space-y-4 text-xs sm:text-sm leading-relaxed">
             <p>
               Yo, <strong>{solicitanteName}</strong>, en representación legal de la Compañía/Persona Natural la empresa Contratista, que en adelante se denominará <strong>"LA CONTRATISTA"</strong>, declaro ser el único y absoluto responsable sobre la contratación, acciones, dirección, control y administración de todos los trabajadores y/o colaboradores, empleados para cumplir las obligaciones contractuales adquiridas con <strong>MODERNA ALIMENTOS S.A.</strong>; así como, dejo expresa constancia de mi compromiso para observar de la manera más estricta, las normas de prevención de riesgos de trabajo y seguridad industrial exigidas por <strong>MODERNA ALIMENTOS S.A.</strong>, para la ejecución de trabajos dentro de sus instalaciones.
             </p>
@@ -64,18 +64,19 @@ export const ConvenioModal: FunctionalComponent<ConvenioModalProps> = ({
           </div>
         </div>
 
-        <div className="flex gap-4 justify-end pt-4 border-t border-gray-700">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-end pt-4 border-t border-gray-700">
           <Button
             onClick={onClose}
-            className="bg-gray-600 text-white hover:bg-gray-500 px-6"
+            className="bg-gray-600 text-white hover:bg-gray-500 px-4 sm:px-6 py-2 text-sm sm:text-base w-full sm:w-auto"
           >
             Cancelar
           </Button>
           <Button
             onClick={handleAccept}
-            className="bg-rojo-moderna text-white hover:bg-rojo-moderna-dark px-6"
+            className="bg-rojo-moderna text-white hover:bg-rojo-moderna-dark px-4 sm:px-6 py-2 text-sm sm:text-base w-full sm:w-auto"
           >
-            Aceptar Términos y Condiciones
+            <span className="hidden sm:inline">Aceptar Términos y Condiciones</span>
+            <span className="sm:hidden">Aceptar</span>
           </Button>
         </div>
       </div>

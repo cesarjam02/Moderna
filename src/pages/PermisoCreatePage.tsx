@@ -42,11 +42,11 @@ const AREAS_POR_DEPARTAMENTO: Record<Departamento, string[]> = {
 };
 
 // --- Clases de Tailwind Reutilizables ---
-const formSectionClass = "p-6 bg-gray-800 rounded-lg border border-gray-700 space-y-4";
+const formSectionClass = "p-4 sm:p-6 bg-gray-800 rounded-lg border border-gray-700 space-y-4";
 const formLabelClass = "block text-sm font-medium text-gray-300 mb-1";
-const formSelectClass = "py-2 px-3 w-full rounded-md bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-2 focus:ring-rojo-moderna";
-const formCheckboxLabelClass = "flex items-center gap-3 p-3 rounded-lg bg-gray-700/50 hover:bg-gray-700 transition-colors";
-const formCheckboxClass = "h-5 w-5 rounded text-rojo-moderna bg-gray-600 border-gray-500 focus:ring-rojo-moderna";
+const formSelectClass = "py-2 px-3 w-full rounded-md bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-2 focus:ring-rojo-moderna text-sm sm:text-base";
+const formCheckboxLabelClass = "flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg bg-gray-700/50 hover:bg-gray-700 transition-colors text-sm sm:text-base";
+const formCheckboxClass = "h-4 w-4 sm:h-5 sm:w-5 rounded text-rojo-moderna bg-gray-600 border-gray-500 focus:ring-rojo-moderna flex-shrink-0";
 
 // --- Funciones de Validación ---
 const validateStep1 = (formData: Partial<CreatePermisoDTO>): { isValid: boolean; errors: string[] } => {
@@ -147,8 +147,8 @@ export const PermisoCreatePage: FunctionalComponent<{ path?: string }> = () => {
   const step2Validation = validateStep2(formData);
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6">Crear Nuevo Permiso de Trabajo</h1>
+    <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
+      <h1 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6">Crear Nuevo Permiso de Trabajo</h1>
       
       {validationErrors.length > 0 && (
         <div className="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
@@ -177,14 +177,14 @@ export const PermisoCreatePage: FunctionalComponent<{ path?: string }> = () => {
           />
         )}
 
-        <div className="flex justify-between items-center mt-8">
+        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 sm:gap-4 mt-6 sm:mt-8">
           <Button 
             type="button" 
             onClick={() => {
               setValidationErrors([]);
               step === 1 ? route('/permisos') : setStep(1);
             }} 
-            className="bg-gray-600 text-white hover:bg-gray-500"
+            className="bg-gray-600 text-white hover:bg-gray-500 w-full sm:w-auto text-sm sm:text-base"
           >
             {step === 1 ? 'Cancelar' : 'Anterior'}
           </Button>
@@ -194,7 +194,7 @@ export const PermisoCreatePage: FunctionalComponent<{ path?: string }> = () => {
               type="button" 
               onClick={handleNextStep} 
               disabled={!step1Validation.isValid}
-              className="bg-blue-600 text-white hover:bg-blue-500 disabled:bg-gray-500 disabled:cursor-not-allowed"
+              className="bg-blue-600 text-white hover:bg-blue-500 disabled:bg-gray-500 disabled:cursor-not-allowed w-full sm:w-auto text-sm sm:text-base"
             >
               Siguiente: ATS
             </Button>
@@ -203,7 +203,7 @@ export const PermisoCreatePage: FunctionalComponent<{ path?: string }> = () => {
             <Button 
               type="submit" 
               disabled={loading || !step1Validation.isValid || !step2Validation.isValid} 
-              className="bg-green-600 text-white hover:bg-green-500 disabled:bg-gray-500 disabled:cursor-not-allowed"
+              className="bg-green-600 text-white hover:bg-green-500 disabled:bg-gray-500 disabled:cursor-not-allowed w-full sm:w-auto text-sm sm:text-base"
             >
               {loading ? 'Creando...' : 'Crear Permiso'}
             </Button>
@@ -666,7 +666,7 @@ const TareaATSForm = ({ index, tarea, onUpdate, onRemove }) => {
 };
 
 // --- Checkbox List Sub-Component ---
-const CheckboxList = ({ title, items, checkedItems, onChange }) => (
+const checkboxList = ({ title, items, checkedItems, onChange }) => (
   <div className="border border-gray-700 rounded-lg p-4">
     <h4 className="font-semibold text-white mb-3">{title}</h4>
     <div className="max-h-56 overflow-y-auto space-y-2 pr-2">

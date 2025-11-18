@@ -33,40 +33,40 @@ export const PermisosPage: FunctionalComponent<{ path?: string }> = () => {
   };
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-bold">Permisos de Trabajo</h1>
-          <p className="text-gray-400">Moderna Alimentos S.A.</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">Permisos de Trabajo</h1>
+          <p className="text-gray-400 text-sm sm:text-base">Moderna Alimentos S.A.</p>
         </div>
         {puedeCrearPermiso && (
           <Button
             onClick={handleNuevoPermiso}
-            className="bg-rojo-moderna text-white hover:bg-rojo-moderna-dark"
+            className="bg-rojo-moderna text-white hover:bg-rojo-moderna-dark w-full sm:w-auto"
           >
             + Nuevo Permiso
           </Button>
         )}
       </div>
 
-      <div className="flex gap-4 mb-6 p-6 bg-gray-800 rounded-lg border border-gray-700">
+      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-6 p-4 sm:p-6 bg-gray-800 rounded-lg border border-gray-700">
         <input 
           name="fechaInicio" 
           type="date" 
           onInput={handleFiltroChange}
-          className="py-3 px-4 text-lg rounded-md bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-2 focus:ring-rojo-moderna"
+          className="py-2 sm:py-3 px-3 sm:px-4 text-base sm:text-lg rounded-md bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-2 focus:ring-rojo-moderna"
         />
         <input 
           name="fechaFin" 
           type="date" 
           onInput={handleFiltroChange}
-          className="py-3 px-4 text-lg rounded-md bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-2 focus:ring-rojo-moderna"
+          className="py-2 sm:py-3 px-3 sm:px-4 text-base sm:text-lg rounded-md bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-2 focus:ring-rojo-moderna"
         />
         <input 
           name="solicitante" 
           onInput={handleFiltroChange} 
           placeholder="Buscar por solicitante..."
-          className="flex-1 py-3 px-4 text-lg rounded-md bg-gray-700 border border-gray-600 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-rojo-moderna"
+          className="flex-1 py-2 sm:py-3 px-3 sm:px-4 text-base sm:text-lg rounded-md bg-gray-700 border border-gray-600 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-rojo-moderna"
         />
       </div>
 
@@ -121,22 +121,22 @@ const PermisoCard: FunctionalComponent<{ permiso: Permiso }> = ({ permiso }) => 
       </div>
 
       {/* Empuja los botones al fondo */}
-      <div className="mt-auto flex justify-between items-center">
-        <div className="text-sm">
+      <div className="mt-auto flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0">
+        <div className="text-xs sm:text-sm">
           <strong className="text-gray-200">Próximo paso:</strong>
-          <span className="text-gray-400 ml-2">
+          <span className="text-gray-400 ml-2 block sm:inline">
             {getProximoPaso(permiso)}
           </span>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 w-full sm:w-auto">
           {permiso.estado === 'ACTIVO' && (
-            <Button className="bg-gray-700 text-white hover:bg-gray-600">
+            <Button className="bg-gray-700 text-white hover:bg-gray-600 flex-1 sm:flex-none text-sm">
               Imprimir
             </Button>
           )}
           <Button
             onClick={() => route(`/permisos/${permiso.id}`)}
-            className="bg-rojo-moderna text-white hover:bg-rojo-moderna-dark"
+            className="bg-rojo-moderna text-white hover:bg-rojo-moderna-dark flex-1 sm:flex-none text-sm"
           >
             Ver Detalles
           </Button>

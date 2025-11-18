@@ -66,15 +66,15 @@ export const UserCreatePage: FunctionalComponent<{ path?: string }> = () => {
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-2xl mx-auto p-4 sm:p-6 lg:p-8">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Crear Nuevo Usuario</h1>
-        <p className="text-gray-400">Complete los datos para crear un nuevo perfil de usuario</p>
+        <h1 className="text-2xl sm:text-3xl font-bold mb-2">Crear Nuevo Usuario</h1>
+        <p className="text-gray-400 text-sm sm:text-base">Complete los datos para crear un nuevo perfil de usuario</p>
       </div>
 
       <form
         onSubmit={onSubmit}
-        className="p-8 bg-gray-800 rounded-lg border border-gray-700 space-y-6"
+        className="p-4 sm:p-6 lg:p-8 bg-gray-800 rounded-lg border border-gray-700 space-y-6"
       >
         {error && (
           <div className="p-4 bg-red-500/10 border border-red-500/50 text-red-400 rounded-lg">

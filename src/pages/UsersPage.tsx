@@ -28,24 +28,30 @@ export const UsersPage: FunctionalComponent<{ path?: string }> = () => {
   };
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
-      <h2 className="text-3xl font-bold mb-6">Usuarios</h2>
+    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto">
+      <h2 className="text-2xl sm:text-3xl font-bold mb-6">Usuarios</h2>
       <div className="space-y-3">
         {data?.map(u => (
           <div
             key={u.id}
-            className="flex items-center justify-between gap-4 p-4 bg-gray-800 rounded-lg border border-gray-700"
+            className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 p-4 bg-gray-800 rounded-lg border border-gray-700"
           >
-            <div className="flex-1">
-              <div className="text-gray-200">
-                <span className="font-semibold">{u.name}</span> — {u.email} — <span className="font-semibold capitalize">{u.role}</span>
-                {!u.active && <span className="ml-2 text-xs text-red-400">(Inactivo)</span>}
+            <div className="flex-1 w-full sm:w-auto">
+              <div className="text-gray-200 text-sm sm:text-base">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                  <span className="font-semibold">{u.name}</span>
+                  <span className="hidden sm:inline">—</span>
+                  <span className="text-gray-300 break-all">{u.email}</span>
+                  <span className="hidden sm:inline">—</span>
+                  <span className="font-semibold capitalize">{u.role}</span>
+                  {!u.active && <span className="text-xs text-red-400">(Inactivo)</span>}
+                </div>
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 w-full sm:w-auto">
               <button
                 onClick={() => handleEdit(u)}
-                className="p-2 text-blue-400 hover:text-blue-300 hover:bg-gray-700 rounded transition-colors"
+                className="p-2 text-blue-400 hover:text-blue-300 hover:bg-gray-700 rounded transition-colors flex-shrink-0"
                 title="Editar usuario"
               >
                 <svg
@@ -65,7 +71,7 @@ export const UsersPage: FunctionalComponent<{ path?: string }> = () => {
               </button>
               <Button
                 onClick={() => handleDelete(u.id)}
-                className="bg-red-600 text-white hover:bg-red-500"
+                className="bg-red-600 text-white hover:bg-red-500 flex-1 sm:flex-none text-sm"
               >
                 Eliminar
               </Button>
