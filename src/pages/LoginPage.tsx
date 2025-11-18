@@ -1,4 +1,5 @@
-import { FunctionalComponent, useState } from 'preact/hooks';
+import { FunctionalComponent } from 'preact';
+import { useState } from 'preact/hooks';
 import { route } from 'preact-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/UI/Button';
@@ -43,7 +44,7 @@ export const LoginPage: FunctionalComponent<{ path?: string }> = () => {
         </div>
 
         {error && (
-          <div className="bg-red-100 border border-red-300 text-red-700 px-4 py-3 rounded-lg mb-6 text-sm">
+          <div className="bg-red-100 border border-red-300 text-red-700 px-4 py-3 rounded-lg mb-6 text-sm whitespace-pre-line">
             {error}
           </div>
         )}
