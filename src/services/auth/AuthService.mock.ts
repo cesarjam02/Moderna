@@ -1,52 +1,41 @@
-import { AuthResponse, LoginDTO, User, UserRole } from '@/types';
+import { AuthResponse, LoginDTO } from '@/types';
 import type { AuthService } from './AuthService';
-
-// NOTE: Updated users with all required roles for testing
-const MOCK_USERS: Array<User & { password: string }> = [
-  {
-    id: 'u1', name: 'Ana (Admin)', email: 'ana@example.com',
-    password: 'admin123', role: 'admin', active: true, createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'u2', name: 'Jorge (Solicitante)', email: 'jorge@example.com',
-    password: 'user123', role: 'SOLICITANTE', active: true, createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'u3', name: 'Wilson (HSEQ)', email: 'wilson@example.com',
-    password: 'user123', role: 'APROBADOR_HSEQ', active: true, createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'u4', name: 'Nelson (Área)', email: 'nelson@example.com',
-    password: 'user123', role: 'APROBADOR_AREA', active: true, createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'u5', name: 'Doctora Ana', email: 'medica@example.com',
-    password: 'user123', role: 'DOCTORA', active: true, createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'u6', name: 'Inspector Luis', email: 'inspector@example.com',
-    password: 'user123', role: 'INSPECTOR', active: true, createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'u7', name: 'Líder Producción', email: 'lider@example.com',
-    password: 'user123', role: 'LIDER', active: true, createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'u8', name: 'Maria (Trabajador)', email: 'maria@example.com',
-    password: 'user123', role: 'TRABAJADOR', active: true, createdAt: new Date().toISOString(),
-  }
-];
+import { MockUsersStorage } from '../mock-storage/users.mock';
 
 export class MockAuthService implements AuthService {
   async login(credentials: LoginDTO): Promise<AuthResponse> {
     await new Promise((resolve) => setTimeout(resolve, 500));
 
-    const user = MOCK_USERS.find(
-      (u) => u.email === credentials.email && u.password === credentials.password && u.active
-    );
+    // Normalizar email
+    const normalizedEmail = credentials.email.trim().toLowerCase();
+
+    // Debug: mostrar todos los usuarios disponibles
+    const allUsers = MockUsersStorage.getAll();
+    console.log('Intentando login con email:', normalizedEmail);
+    console.log('Usuarios en almacenamiento:', allUsers.map(u => ({ email: u.email, name: u.name })));
+
+    // Buscar usuario en el almacenamiento compartido
+    const user = MockUsersStorage.findByEmail(normalizedEmail);
 
     if (!user) {
+      console.error('Usuario no encontrado:', normalizedEmail);
+      console.error('Usuarios disponibles:', allUsers.map(u => u.email));
       throw new Error('Credenciales inválidas');
+    }
+
+    // Comparar contraseñas (sin espacios en blanco al inicio/final)
+    const storedPassword = user.password;
+    const providedPassword = credentials.password;
+    
+    if (storedPassword !== providedPassword) {
+      console.error('Contraseña incorrecta para:', normalizedEmail);
+      console.error('Contraseña almacenada:', storedPassword, 'Longitud:', storedPassword.length);
+      console.error('Contraseña proporcionada:', providedPassword, 'Longitud:', providedPassword.length);
+      throw new Error('Credenciales inválidas');
+    }
+
+    if (!user.active) {
+      throw new Error('Usuario inactivo');
     }
 
     const { password, ...userWithoutPassword } = user;

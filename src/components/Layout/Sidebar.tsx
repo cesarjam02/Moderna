@@ -61,19 +61,6 @@ export function Sidebar() {
               </Link>
             </li>
           )}
-
-          {/* 5. Indicadores (Solo Admin, LIDER, HSEQ, AREA) */}
-          {hasAnyRole(['admin', 'LIDER', 'APROBADOR_HSEQ', 'APROBADOR_AREA', 'manager']) && (
-            <li>
-              <Link
-                href="/indicadores"
-                className={baseLinkClass}
-                activeClassName={activeLinkClass}
-              >
-                Indicadores
-              </Link>
-            </li>
-          )}
         </ul>
       </nav>
     </aside>

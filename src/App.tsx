@@ -18,9 +18,6 @@ import { PermisosPage } from '@/pages/PermisosPage';
 import { PermisoCreatePage } from '@/pages/PermisoCreatePage';
 import { PermisoDetailPage } from '@/pages/PermisoDetailPage';
 
-// (Componente para la página de Indicadores, puedes crearlo después)
-// import { IndicadoresPage } from '@/pages/IndicadoresPage';
-
 function AppContent() {
   const { isAuthenticated, loading } = useAuth();
 
@@ -91,15 +88,6 @@ function AppContent() {
               component={UserCreatePage} 
               roles={['admin']} 
             />
-            
-            {/* // --- Ruta de Indicadores (Protegida) ---
-            // (Descomenta esto cuando crees la página IndicadoresPage.tsx)
-            // <ProtectedRoute 
-            //   path="/indicadores" 
-            //   component={IndicadoresPage} 
-            //   roles={['admin', 'LIDER', 'APROBADOR_HSEQ', 'APROBADOR_AREA', 'manager']} 
-            // /> 
-            */}
             
           </Router>
         </main>

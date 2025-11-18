@@ -34,7 +34,8 @@ export interface User {
 export interface CreateUserDTO {
   name: string;
   email: string;
-  role?: UserRole; // Actualizado
+  password: string;
+  role: UserRole; // Obligatorio
 }
 
 export interface UpdateUserDTO {

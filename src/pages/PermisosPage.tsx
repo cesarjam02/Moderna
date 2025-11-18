@@ -8,10 +8,12 @@ import { Button } from '@/components/UI/Button';
 import { Input } from '@/components/UI/Input';
 import { Badge } from '@/components/UI/Badge';
 import { Tag } from '@/components/UI/Tag';
+import { ConvenioModal } from '@/components/Modals/ConvenioModal';
 
 export const PermisosPage: FunctionalComponent<{ path?: string }> = () => {
-  const { hasAnyRole } = useAuth();
+  const { hasAnyRole, user } = useAuth();
   const [filtros, setFiltros] = useState({});
+  const [showConvenioModal, setShowConvenioModal] = useState(false);
   const { data: permisos, loading, error } = usePermisos(filtros);
   
   // Solo estos roles pueden crear permisos
@@ -20,6 +22,14 @@ export const PermisosPage: FunctionalComponent<{ path?: string }> = () => {
   const handleFiltroChange = (e: Event) => {
     const { name, value } = e.target as HTMLInputElement;
     setFiltros(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleNuevoPermiso = () => {
+    setShowConvenioModal(true);
+  };
+
+  const handleAcceptConvenio = () => {
+    route('/permisos/nuevo');
   };
 
   return (
@@ -31,7 +41,7 @@ export const PermisosPage: FunctionalComponent<{ path?: string }> = () => {
         </div>
         {puedeCrearPermiso && (
           <Button
-            onClick={() => route('/permisos/nuevo')}
+            onClick={handleNuevoPermiso}
             className="bg-rojo-moderna text-white hover:bg-rojo-moderna-dark"
           >
             + Nuevo Permiso
@@ -39,10 +49,25 @@ export const PermisosPage: FunctionalComponent<{ path?: string }> = () => {
         )}
       </div>
 
-      <div className="flex gap-4 mb-6 p-4 bg-gray-800 rounded-lg border border-gray-700">
-        <input name="fechaInicio" type="date" onInput={handleFiltroChange} />
-        <input name="fechaFin" type="date" onInput={handleFiltroChange} />
-        <input name="solicitante" onInput={handleFiltroChange} placeholder="Buscar por solicitante..." />
+      <div className="flex gap-4 mb-6 p-6 bg-gray-800 rounded-lg border border-gray-700">
+        <input 
+          name="fechaInicio" 
+          type="date" 
+          onInput={handleFiltroChange}
+          className="py-3 px-4 text-lg rounded-md bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-2 focus:ring-rojo-moderna"
+        />
+        <input 
+          name="fechaFin" 
+          type="date" 
+          onInput={handleFiltroChange}
+          className="py-3 px-4 text-lg rounded-md bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-2 focus:ring-rojo-moderna"
+        />
+        <input 
+          name="solicitante" 
+          onInput={handleFiltroChange} 
+          placeholder="Buscar por solicitante..."
+          className="flex-1 py-3 px-4 text-lg rounded-md bg-gray-700 border border-gray-600 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-rojo-moderna"
+        />
       </div>
 
       {loading && <p>Cargando permisos...</p>}
@@ -53,6 +78,13 @@ export const PermisosPage: FunctionalComponent<{ path?: string }> = () => {
           <PermisoCard key={permiso.id} permiso={permiso} />
         ))}
       </div>
+
+      <ConvenioModal
+        isOpen={showConvenioModal}
+        onClose={() => setShowConvenioModal(false)}
+        onAccept={handleAcceptConvenio}
+        solicitanteName={user?.name || 'Usuario'}
+      />
     </div>
   );
 };

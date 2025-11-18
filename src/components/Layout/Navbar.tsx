@@ -26,10 +26,14 @@ export const Navbar: FunctionalComponent = () => {
 
       {/* Navegación */}
       <nav className="flex items-center gap-6">
-        <a href="/" className="font-medium hover:text-red-100 transition-colors">Inicio</a>
-        <a href="/productos" className="font-medium hover:text-red-100 transition-colors">Productos</a>
-        <a href="/nosotros" className="font-medium hover:text-red-100 transition-colors">Nosotros</a>
-        <a href="/contacto" className="font-medium hover:text-red-100 transition-colors">Contacto</a>
+        {!isAuthenticated && (
+          <>
+            <a href="/" className="font-medium hover:text-red-100 transition-colors">Inicio</a>
+            <a href="/productos" className="font-medium hover:text-red-100 transition-colors">Productos</a>
+            <a href="/nosotros" className="font-medium hover:text-red-100 transition-colors">Nosotros</a>
+            <a href="/contacto" className="font-medium hover:text-red-100 transition-colors">Contacto</a>
+          </>
+        )}
 
         {isAuthenticated ? (
           <>

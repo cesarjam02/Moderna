@@ -31,8 +31,15 @@ export class MockPermisoService implements PermisoService {
   async create(input: CreatePermisoDTO): Promise<Permiso> {
     await new Promise(res => setTimeout(res, 500));
 
-    const solicitanteId = 'u2'; 
-    const solicitanteNombre = 'Jorge (Solicitante)';
+    // Obtener el usuario autenticado del localStorage
+    const userStr = localStorage.getItem('auth_user');
+    if (!userStr) {
+      throw new Error('Usuario no autenticado. Debe iniciar sesión para crear un permiso.');
+    }
+
+    const user = JSON.parse(userStr);
+    const solicitanteId = user.id;
+    const solicitanteNombre = user.name;
 
     const newPermiso: Permiso = {
       id: String(nextId++),
@@ -71,14 +78,34 @@ export class MockPermisoService implements PermisoService {
     const permiso = MOCK_PERMISOS.find(p => p.id === id);
     if (!permiso) throw new Error('Permiso no encontrado');
 
+    // Obtener el usuario autenticado
+    const userStr = localStorage.getItem('auth_user');
+    if (!userStr) {
+      throw new Error('Usuario no autenticado');
+    }
+    const user = JSON.parse(userStr);
+
     const nextRole = getNextRolToSign(permiso);
     if (!nextRole) throw new Error('No hay aprobaciones pendientes');
+
+    // Validación especial para SOLICITANTE: solo el solicitante específico puede firmar
+    if (nextRole === 'SOLICITANTE') {
+      if (user.id !== permiso.solicitanteId) {
+        throw new Error(`Solo ${permiso.solicitante.nombre} puede firmar como solicitante`);
+      }
+    } else {
+      // Para otros roles, verificar que el SOLICITANTE ya haya firmado
+      const solicitanteAprobacion = permiso.aprobaciones.find(a => a.rolFirmante === 'SOLICITANTE');
+      if (!solicitanteAprobacion || solicitanteAprobacion.estado !== 'FIRMADO') {
+        throw new Error('El solicitante debe firmar primero antes de continuar con la cadena de aprobaciones');
+      }
+    }
 
     const aprobacion = permiso.aprobaciones.find(a => a.rolFirmante === nextRole);
     if (aprobacion) {
       aprobacion.estado = 'FIRMADO';
       aprobacion.fechaFirma = new Date().toISOString();
-      aprobacion.usuarioFirma = { id: `mock-${nextRole}-id`, nombre: `Firma ${nextRole}` };
+      aprobacion.usuarioFirma = { id: user.id, nombre: user.name };
       aprobacion.firmaUrl = firmaUrl;
     }
     

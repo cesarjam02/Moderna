@@ -10,6 +10,10 @@ export interface Permiso {
   
   // Paso 1: Información General
   solicitanteId: UserId;
+  solicitante: {
+    id: UserId;
+    nombre: string;
+  };
   fechaSolicitud: string; // ISO Date
   fechaInicio: string; // ISO Date
   fechaCaducidad: string; // ISO Date

@@ -16,11 +16,29 @@ import { CloseModal } from '@/components/Modals/CloseModal';
 
 const sectionClass = "p-6 bg-gray-800 rounded-lg border border-gray-700";
 
-const canSign = (permiso: Permiso, userRole: UserRole): Aprobacion | null => {
+const canSign = (permiso: Permiso, userRole: UserRole, userId?: string): Aprobacion | null => {
   const nextPendingApproval = permiso.aprobaciones.find(a => a.estado === 'PENDIENTE');
-  if (nextPendingApproval && nextPendingApproval.rolFirmante === userRole) {
+  if (!nextPendingApproval) return null;
+  
+  // Si la próxima aprobación es SOLICITANTE, solo el solicitante específico puede firmar
+  if (nextPendingApproval.rolFirmante === 'SOLICITANTE') {
+    if (userRole === 'SOLICITANTE' && userId && userId === permiso.solicitanteId) {
+      return nextPendingApproval;
+    }
+    return null;
+  }
+  
+  // Para otros roles, verificar que el SOLICITANTE ya haya firmado
+  const solicitanteAprobacion = permiso.aprobaciones.find(a => a.rolFirmante === 'SOLICITANTE');
+  if (!solicitanteAprobacion || solicitanteAprobacion.estado !== 'FIRMADO') {
+    return null; // El solicitante debe firmar primero
+  }
+  
+  // Si el rol coincide, puede firmar
+  if (nextPendingApproval.rolFirmante === userRole) {
     return nextPendingApproval;
   }
+  
   return null;
 };
 
@@ -84,7 +102,8 @@ export const PermisoDetailPage: FunctionalComponent<{ id: string }> = ({ id }) =
   if (!permiso) return <p className="p-8">Permiso no encontrado.</p>;
 
   const userRole = user?.role as UserRole;
-  const nextApproval = canSign(permiso, userRole);
+  const userId = user?.id;
+  const nextApproval = canSign(permiso, userRole, userId);
   const userCanSignMedico = canSignMedico(permiso, userRole);
   const userCanMonitor = canMonitor(permiso, userRole);
   const userCanClose = canClose(permiso, userRole);
@@ -92,7 +111,11 @@ export const PermisoDetailPage: FunctionalComponent<{ id: string }> = ({ id }) =
   const puedeDescargar = permiso.estado === 'ACTIVO' || permiso.estado === 'CERRADO';
 
   const handleConfirmSignPrincipal = async (signatureDataUrl: string) => {
-    await firmarPermiso(signatureDataUrl);
+    try {
+      await firmarPermiso(signatureDataUrl);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Error al firmar el permiso');
+    }
   };
 
   const handleConfirmSignMedico = async (signatureDataUrl: string) => {
