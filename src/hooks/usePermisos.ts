@@ -16,6 +16,8 @@ export function usePermisos(filtros: any) {
     async (input: CreatePermisoDTO) => {
       const created = await Services.permisos.create(input);
       await listState.refetch();
+      // Forzar actualización de la lista de permisos para que las notificaciones se actualicen
+      window.dispatchEvent(new CustomEvent('permiso-updated'));
       return created;
     },
     [listState.refetch]

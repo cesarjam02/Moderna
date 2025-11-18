@@ -25,18 +25,24 @@ interface NotificationsContextType {
 const NotificationsContext = createContext<NotificationsContextType | null>(null);
 
 const canSign = (permiso: Permiso, userRole: UserRole, userId?: string): boolean => {
+  // Buscar la primera aprobación pendiente en el orden correcto
   const nextPendingApproval = permiso.aprobaciones.find(a => a.estado === 'PENDIENTE');
-  if (!nextPendingApproval) return false;
+  if (!nextPendingApproval) {
+    return false;
+  }
   
+  // Si la próxima aprobación es SOLICITANTE, solo el solicitante específico puede firmar
   if (nextPendingApproval.rolFirmante === 'SOLICITANTE') {
     return userRole === 'SOLICITANTE' && userId === permiso.solicitanteId;
   }
   
+  // Para otros roles, verificar que el SOLICITANTE ya haya firmado
   const solicitanteAprobacion = permiso.aprobaciones.find(a => a.rolFirmante === 'SOLICITANTE');
   if (!solicitanteAprobacion || solicitanteAprobacion.estado !== 'FIRMADO') {
     return false;
   }
   
+  // Verificar si el rol del usuario coincide con el rol que debe firmar
   return nextPendingApproval.rolFirmante === userRole;
 };
 
@@ -65,7 +71,7 @@ const canClose = (permiso: Permiso, userRole: UserRole): boolean => {
 
 export function NotificationsProvider({ children }: { children: preact.ComponentChildren | preact.ComponentChildren[] }) {
   const { user, isAuthenticated } = useAuth();
-  const { data: permisos, loading } = usePermisos({});
+  const { data: permisos, loading, refetch } = usePermisos({});
   const [viewedIds, setViewedIds] = useState<Set<string>>(new Set());
 
   // Cargar notificaciones vistas cuando cambia el usuario
@@ -77,14 +83,29 @@ export function NotificationsProvider({ children }: { children: preact.Component
     }
   }, [user?.id]);
 
+  // Escuchar eventos de actualización de permisos para refrescar las notificaciones
+  useEffect(() => {
+    const handlePermisoUpdated = () => {
+      refetch();
+    };
+    
+    window.addEventListener('permiso-updated', handlePermisoUpdated);
+    return () => {
+      window.removeEventListener('permiso-updated', handlePermisoUpdated);
+    };
+  }, [refetch]);
+
   const notifications = useMemo<Notification[]>(() => {
-    if (!isAuthenticated || !user || !permisos || permisos.length === 0) return [];
+    if (!isAuthenticated || !user || !permisos || permisos.length === 0) {
+      return [];
+    }
 
     const userRole = user.role as UserRole;
     const userId = user.id;
     const notifs: Notification[] = [];
 
     permisos.forEach(permiso => {
+      // Verificar si puede firmar aprobaciones principales
       if (canSign(permiso, userRole, userId)) {
         const nextApproval = permiso.aprobaciones.find(a => a.estado === 'PENDIENTE');
         notifs.push({
@@ -98,6 +119,7 @@ export function NotificationsProvider({ children }: { children: preact.Component
         });
       }
 
+      // Verificar si puede firmar aprobación médica
       if (canSignMedico(permiso, userRole)) {
         notifs.push({
           id: `medico-${permiso.id}`,
@@ -110,6 +132,7 @@ export function NotificationsProvider({ children }: { children: preact.Component
         });
       }
 
+      // Verificar si puede monitorear
       if (canMonitor(permiso, userRole)) {
         notifs.push({
           id: `monitor-${permiso.id}`,
@@ -122,6 +145,7 @@ export function NotificationsProvider({ children }: { children: preact.Component
         });
       }
 
+      // Verificar si puede cerrar
       if (canClose(permiso, userRole)) {
         notifs.push({
           id: `close-${permiso.id}`,
@@ -135,6 +159,7 @@ export function NotificationsProvider({ children }: { children: preact.Component
       }
     });
 
+    // Filtrar notificaciones ya vistas
     const unviewedNotifs = notifs.filter(notif => !viewedIds.has(notif.id));
 
     return unviewedNotifs.sort((a, b) => {

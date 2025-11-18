@@ -1,8 +1,9 @@
 import { FunctionalComponent } from 'preact';
-import { useState } from 'preact/hooks';
+import { useState, useEffect } from 'preact/hooks';
 import { render } from 'preact/compat';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermiso } from '@/hooks/usePermiso';
+import { useNotifications } from '@/hooks/useNotifications';
 import { Button } from '@/components/UI/Button';
 import { Badge } from '@/components/UI/Badge';
 import { Tag } from '@/components/UI/Tag';
@@ -80,6 +81,7 @@ const formatDate = (dateString?: string): string => {
 
 export const PermisoDetailPage: FunctionalComponent<{ id: string }> = ({ id }) => {
   const { user } = useAuth();
+  const { markAsViewed } = useNotifications();
   const { 
     data: permiso, 
     loading, 
@@ -96,6 +98,49 @@ export const PermisoDetailPage: FunctionalComponent<{ id: string }> = ({ id }) =
   const [showCloseModal, setShowCloseModal] = useState(false);
   
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+
+  // Marcar notificaciones relacionadas como leídas cuando se carga el permiso
+  useEffect(() => {
+    if (permiso && user) {
+      const userRole = user.role as UserRole;
+      const userId = user.id;
+      
+      // Solo marcar las notificaciones que realmente corresponden a este usuario
+      // Verificar si puede firmar aprobaciones principales
+      const nextPendingApproval = permiso.aprobaciones.find(a => a.estado === 'PENDIENTE');
+      if (nextPendingApproval) {
+        if (nextPendingApproval.rolFirmante === 'SOLICITANTE' && userRole === 'SOLICITANTE' && userId === permiso.solicitanteId) {
+          markAsViewed(`sign-${permiso.id}`);
+        } else if (nextPendingApproval.rolFirmante === userRole) {
+          const solicitanteAprobacion = permiso.aprobaciones.find(a => a.rolFirmante === 'SOLICITANTE');
+          if (solicitanteAprobacion && solicitanteAprobacion.estado === 'FIRMADO') {
+            markAsViewed(`sign-${permiso.id}`);
+          }
+        }
+      }
+      
+      // Verificar si puede firmar aprobación médica
+      if (userRole === 'DOCTORA' && permiso.aprobacionMedica && permiso.aprobacionMedica.estado === 'PENDIENTE') {
+        markAsViewed(`medico-${permiso.id}`);
+      }
+      
+      // Verificar si puede monitorear
+      const allMainApprovalsDone = permiso.aprobaciones
+        .filter(a => a.rolFirmante !== 'LIDER')
+        .every(a => a.estado === 'FIRMADO');
+      if (userRole === 'INSPECTOR' && permiso.monitoreo && permiso.monitoreo.estado === 'PENDIENTE' && allMainApprovalsDone) {
+        markAsViewed(`monitor-${permiso.id}`);
+      }
+      
+      // Verificar si puede cerrar
+      if (userRole === 'LIDER' && permiso.estado === 'ACTIVO') {
+        const liderAprobacion = permiso.aprobaciones.find(a => a.rolFirmante === 'LIDER');
+        if (!liderAprobacion || liderAprobacion.estado !== 'FIRMADO') {
+          markAsViewed(`close-${permiso.id}`);
+        }
+      }
+    }
+  }, [permiso?.id, user?.id, user?.role, markAsViewed]);
 
   if (loading) return <p className="p-8">Cargando permiso...</p>;
   if (error) return <p className="p-8 text-red-400">Error: {error.message}</p>;

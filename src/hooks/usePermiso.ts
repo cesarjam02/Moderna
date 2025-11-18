@@ -14,6 +14,8 @@ export function usePermiso(id: string | null) {
     const updated = await Services.permisos.firmar(id, firmaUrl);
     detailState.setData(updated);
     await detailState.refetch();
+    // Forzar actualización de la lista de permisos para que las notificaciones se actualicen
+    window.dispatchEvent(new CustomEvent('permiso-updated'));
     return updated;
   }, [id, detailState.refetch, detailState.setData]);
 
@@ -22,6 +24,8 @@ export function usePermiso(id: string | null) {
     const updated = await Services.permisos.firmarAptitudMedica(id, firmaUrl);
     detailState.setData(updated);
     await detailState.refetch();
+    // Forzar actualización de la lista de permisos para que las notificaciones se actualicen
+    window.dispatchEvent(new CustomEvent('permiso-updated'));
     return updated;
   }, [id, detailState.refetch, detailState.setData]);
 
@@ -45,6 +49,8 @@ export function usePermiso(id: string | null) {
     const updated = await Services.permisos.completarMonitoreo(id, firmaUrl, lecturaInicial, lecturaPeriodica);
     detailState.setData(updated);
     await detailState.refetch();
+    // Forzar actualización de la lista de permisos para que las notificaciones se actualicen
+    window.dispatchEvent(new CustomEvent('permiso-updated'));
     return updated;
   }, [id, detailState.refetch, detailState.setData]);
 
@@ -53,6 +59,8 @@ export function usePermiso(id: string | null) {
     const updated = await Services.permisos.cerrarPermiso(id, observaciones, firmaUrl);
     detailState.setData(updated);
     await detailState.refetch();
+    // Forzar actualización de la lista de permisos para que las notificaciones se actualicen
+    window.dispatchEvent(new CustomEvent('permiso-updated'));
     return updated;
   }, [id, detailState.refetch, detailState.setData]);
 
