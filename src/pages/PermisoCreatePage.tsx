@@ -416,7 +416,7 @@ const Step1InfoGeneral = ({ formData, setFormData, onFieldChange }) => {
                 <h3 className="text-lg font-semibold text-yellow-300">
                   Documentos Requeridos para {personal.nombres} {personal.apellidos} ({personal.tipo})
                 </h3>
-                {esInterno && (
+                {esInterno && needsMedicaExterno && (
                   <FileInput label="Certificado de Aptitud Médica" tipo="APTITUD_MEDICA" personalId={personal.id} onChange={handleFileChange} fileSelected={documentosPersona.some(d => d.tipo === 'APTITUD_MEDICA')} />
                 )}
                 {esExterno && (

@@ -146,6 +146,7 @@ export const PermisoPDF: FunctionalComponent<PermisoPDFProps> = ({ permiso, id }
   ];
 
   const showGasTable = permiso.tiposTrabajo.some(t => ['ESPACIOS_CONFINADOS', 'QUIMICOS'].includes(t));
+  const showAptitudMedica = permiso.tiposTrabajo.some(t => ['ALTURAS', 'ESPACIOS_CONFINADOS', 'QUIMICOS'].includes(t)) && permiso.aprobacionMedica;
 
   const getFirmaWorker = (personalId?: string) => {
     if (!personalId) return null;
@@ -400,8 +401,42 @@ export const PermisoPDF: FunctionalComponent<PermisoPDFProps> = ({ permiso, id }
           </>
         )}
 
-        {/* 6. TERMINACIÓN (FIRMADA POR HSEQ Y ÁREA) */}
-        <div style={STYLES.sectionTitle}>{showGasTable ? '6' : '5'}. TÉRMINO DEL PERMISO DE TRABAJO</div>
+        {/* APTITUD MÉDICA (CONDICIONAL) */}
+        {showAptitudMedica && (
+          <>
+            <div style={STYLES.sectionTitle}>{showGasTable ? '6' : '5'}. APTITUD MÉDICA</div>
+            <table style={STYLES.table}>
+              <tbody>
+                <tr>
+                  <td style={{ ...STYLES.cell, width: '50%', padding: 0 }}>
+                    <SignatureBlock 
+                      firmaUrl={permiso.aprobacionMedica?.firmaUrl} 
+                      nombre={getFullName(permiso.aprobacionMedica?.usuarioFirma)} 
+                      cargo="DOCTORA / MÉDICO" 
+                      fecha={permiso.aprobacionMedica?.estado === 'FIRMADO' ? formatDate(permiso.aprobacionMedica.fechaFirma) : ''} 
+                    />
+                  </td>
+                  <td style={{ ...STYLES.cell, width: '50%', padding: '12px', verticalAlign: 'top', fontSize: '10px' }}>
+                    <div style={{ marginBottom: '8px' }}>
+                      <strong>ESTADO:</strong> 
+                      <span style={{ marginLeft: '10px', fontWeight: 'bold' }}>
+                        {permiso.aprobacionMedica?.estado === 'FIRMADO' ? 'APROBADO' : 'PENDIENTE'}
+                      </span>
+                    </div>
+                    <div style={{ marginTop: '8px', fontStyle: 'italic', color: '#6B7280' }}>
+                      Certificación de aptitud médica para trabajos en alturas, espacios confinados y con químicos.
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </>
+        )}
+
+        {/* TERMINACIÓN (FIRMADA POR HSEQ Y ÁREA) */}
+        <div style={STYLES.sectionTitle}>
+          {showGasTable && showAptitudMedica ? '7' : showGasTable || showAptitudMedica ? '6' : '5'}. TÉRMINO DEL PERMISO DE TRABAJO
+        </div>
         <table style={STYLES.table}>
           <tbody>
             <tr>

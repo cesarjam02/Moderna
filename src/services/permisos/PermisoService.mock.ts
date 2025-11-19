@@ -74,7 +74,7 @@ export class MockPermisoService implements PermisoService {
       documentos: input.documentos.map(d => ({ id: crypto.randomUUID(), ...d, url: URL.createObjectURL(d.file), personalId: d.personalId })),
       aprobaciones,
       aprobacionesCierre: [],
-      aprobacionMedica: input.tiposTrabajo.includes('ALTURAS') ? createAprobacion('DOCTORA') : null,
+      aprobacionMedica: input.tiposTrabajo.some(t => ['ALTURAS', 'ESPACIOS_CONFINADOS', 'QUIMICOS'].includes(t)) ? createAprobacion('DOCTORA') : null,
       monitoreo: null,
     };
 
