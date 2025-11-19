@@ -57,6 +57,14 @@ const STYLES = {
 const formatDate = (d?: string) => d ? new Date(d).toLocaleDateString('es-EC') : '';
 const formatDateTime = (d?: string) => d ? new Date(d).toLocaleString('es-EC', { hour12: false }) : '';
 
+// Helper para obtener nombre completo si el objeto lo tiene, o fallback al nombre simple
+const getFullName = (usuarioFirma: any) => {
+  if (!usuarioFirma) return null;
+  if (usuarioFirma.apellido) return `${usuarioFirma.nombre} ${usuarioFirma.apellido}`;
+  if (usuarioFirma.lastname) return `${usuarioFirma.nombre} ${usuarioFirma.lastname}`;
+  return usuarioFirma.nombre;
+};
+
 // --- SUB-COMPONENTES REUTILIZABLES ---
 
 const CleanListItem: FunctionalComponent<{ text: string }> = ({ text }) => (
@@ -122,10 +130,10 @@ export const PermisoPDF: FunctionalComponent<PermisoPDFProps> = ({ permiso, id }
   const hseq = permiso.aprobaciones.find(a => a.rolFirmante === 'APROBADOR_HSEQ');
   const area = permiso.aprobaciones.find(a => a.rolFirmante === 'APROBADOR_AREA');
   
-  // --- DATOS CIERRE (Corregido orden) ---
-  // 1. HSEQ Cierre
+  // --- DATOS CIERRE ---
+  // Nota: Aunque el flujo de aprobación haya cambiado (Area -> HSEQ), 
+  // mantenemos la asignación visual aquí para no romper el diseño del PDF.
   const hseqCierre = permiso.aprobacionesCierre.find(a => a.rolFirmante === 'APROBADOR_HSEQ');
-  // 2. Area Cierre (Lider/Residente)
   const areaCierre = permiso.aprobacionesCierre.find(a => a.rolFirmante === 'APROBADOR_AREA');
   
   const inspector = permiso.monitoreo;
@@ -188,18 +196,28 @@ export const PermisoPDF: FunctionalComponent<PermisoPDFProps> = ({ permiso, id }
           <tbody>
             <tr>
               <td style={{ ...STYLES.cell, width: '25%', padding: 0 }}>
-                <SignatureBlock firmaUrl={area?.firmaUrl} nombre={area?.usuarioFirma?.nombre} cargo="APROBADOR ÁREA" fecha={area?.estado === 'FIRMADO' ? formatDate(area.fechaFirma) : ''} />
+                <SignatureBlock 
+                  firmaUrl={area?.firmaUrl} 
+                  nombre={getFullName(area?.usuarioFirma)} 
+                  cargo="APROBADOR ÁREA" 
+                  fecha={area?.estado === 'FIRMADO' ? formatDate(area.fechaFirma) : ''} 
+                />
               </td>
               <td style={{ ...STYLES.cell, width: '25%', padding: 0 }}>
                 <SignatureBlock 
                   firmaUrl={solicitante?.firmaUrl} 
-                  nombre={solicitante?.usuarioFirma?.nombre} 
+                  nombre={getFullName(solicitante?.usuarioFirma)} 
                   cargo="SOLICITANTE" 
                   fecha={solicitante?.estado === 'FIRMADO' ? formatDate(solicitante.fechaFirma) : ''} 
                 />
               </td>
               <td style={{ ...STYLES.cell, width: '25%', padding: 0 }}>
-                <SignatureBlock firmaUrl={hseq?.firmaUrl} nombre={hseq?.usuarioFirma?.nombre} cargo="HSEQ" fecha={hseq?.estado === 'FIRMADO' ? formatDate(hseq.fechaFirma) : ''} />
+                <SignatureBlock 
+                  firmaUrl={hseq?.firmaUrl} 
+                  nombre={getFullName(hseq?.usuarioFirma)} 
+                  cargo="HSEQ" 
+                  fecha={hseq?.estado === 'FIRMADO' ? formatDate(hseq.fechaFirma) : ''} 
+                />
               </td>
               <td style={{ ...STYLES.cell, width: '25%', fontSize: '10px', padding: '10px', verticalAlign: 'top', backgroundColor: '#F9FAFB' }}>
                 <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '6px'}}>
@@ -353,7 +371,9 @@ export const PermisoPDF: FunctionalComponent<PermisoPDFProps> = ({ permiso, id }
                   <td style={STYLES.cellCenter}>{inspector?.lecturaFinal?.o2}</td> 
                   <td rowSpan={4} style={{ ...STYLES.cell, padding: 0, verticalAlign: 'bottom' }}>
                      <SignatureBlock 
-                       firmaUrl={inspector?.firmaUrl} nombre={inspector?.usuarioFirma?.nombre} cargo="INSPECTOR"
+                       firmaUrl={inspector?.firmaUrl} 
+                       nombre={getFullName(inspector?.usuarioFirma)} 
+                       cargo="INSPECTOR"
                      />
                   </td>
                 </tr>
@@ -403,11 +423,11 @@ export const PermisoPDF: FunctionalComponent<PermisoPDFProps> = ({ permiso, id }
               </td>
             </tr>
             <tr>
-              {/* ORDEN CORREGIDO: Primero HSEQ (col 1), Luego ÁREA (col 2) */}
+              {/* ORDEN VISUAL: Primero HSEQ (col 1), Luego ÁREA (col 2) - Se mantiene diseño original */}
               <td style={{ ...STYLES.cell, width: '50%', padding: 0 }}>
                  <SignatureBlock 
                     firmaUrl={hseqCierre?.firmaUrl} 
-                    nombre={hseqCierre?.usuarioFirma?.nombre} 
+                    nombre={getFullName(hseqCierre?.usuarioFirma)} 
                     cargo="RESPONSABLE HSEQ (ARCHIVO)" 
                     fecha={hseqCierre?.estado === 'FIRMADO' ? formatDate(hseqCierre.fechaFirma) : ''}
                  />
@@ -415,7 +435,7 @@ export const PermisoPDF: FunctionalComponent<PermisoPDFProps> = ({ permiso, id }
               <td style={{ ...STYLES.cell, width: '50%', padding: 0 }}>
                  <SignatureBlock 
                     firmaUrl={areaCierre?.firmaUrl} 
-                    nombre={areaCierre?.usuarioFirma?.nombre} 
+                    nombre={getFullName(areaCierre?.usuarioFirma)} 
                     cargo="LÍDER / RESIDENTE (CIERRE)" 
                     fecha={areaCierre?.estado === 'FIRMADO' ? formatDate(areaCierre.fechaFirma) : ''}
                  />

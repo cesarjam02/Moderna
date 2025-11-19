@@ -1,8 +1,26 @@
 import { CreatePermisoDTO, Permiso, UserRole, Aprobacion, LecturaGases } from '@/types';
 import type { PermisoService } from './PermisoService';
 
-const MOCK_PERMISOS: Permiso[] = [];
-let nextId = 1;
+// --- PERSISTENCIA LOCAL ---
+const STORAGE_KEY = 'moderna_permisos_db_v2';
+
+const loadPermisos = (): Permiso[] => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+};
+
+const savePermisos = () => {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(MOCK_PERMISOS));
+};
+
+const MOCK_PERMISOS: Permiso[] = loadPermisos();
+let nextId = MOCK_PERMISOS.length > 0 
+  ? Math.max(...MOCK_PERMISOS.map(p => parseInt(p.id) || 0)) + 1 
+  : 1;
 
 const createAprobacion = (rol: UserRole, asignado?: { id: string; nombre: string }): Aprobacion => ({
   id: crypto.randomUUID(),
@@ -31,9 +49,8 @@ export class MockPermisoService implements PermisoService {
     const user = JSON.parse(userStr);
 
     const aprobaciones: Aprobacion[] = [];
-    // 1. Solicitante
     aprobaciones.push(createAprobacion('SOLICITANTE', { id: user.id, nombre: user.name }));
-    // 2. Trabajadores
+    
     if (input.personalAutorizado && input.personalAutorizado.length > 0) {
       input.personalAutorizado.forEach((p) => {
         aprobaciones.push(createAprobacion('TRABAJADOR', { id: p.id || crypto.randomUUID(), nombre: `${p.nombres} ${p.apellidos}` }));
@@ -41,7 +58,7 @@ export class MockPermisoService implements PermisoService {
     } else {
       aprobaciones.push(createAprobacion('TRABAJADOR'));
     }
-    // 3. Aprobadores
+    
     aprobaciones.push(createAprobacion('APROBADOR_HSEQ'));
     aprobaciones.push(createAprobacion('APROBADOR_AREA'));
 
@@ -58,10 +75,11 @@ export class MockPermisoService implements PermisoService {
       aprobaciones,
       aprobacionesCierre: [],
       aprobacionMedica: input.tiposTrabajo.includes('ALTURAS') ? createAprobacion('DOCTORA') : null,
-      monitoreo: null, // Inicializado en null, se crea al cierre si es necesario
+      monitoreo: null,
     };
 
     MOCK_PERMISOS.push(newPermiso);
+    savePermisos(); 
     return JSON.parse(JSON.stringify(newPermiso));
   }
 
@@ -88,10 +106,41 @@ export class MockPermisoService implements PermisoService {
     
     const allS = permiso.aprobaciones.every(a => a.estado === 'FIRMADO');
     const medS = !permiso.aprobacionMedica || permiso.aprobacionMedica.estado === 'FIRMADO';
-    // Monitoreo no bloquea la activación (se hace al cierre)
+    
     if(allS && medS) permiso.estado = 'ACTIVO';
 
+    savePermisos();
     return JSON.parse(JSON.stringify(permiso));
+  }
+
+  async firmarAptitudMedica(id: string, f: string) {
+      await new Promise(res => setTimeout(res, 400));
+      
+      // BUSCAR REFERENCIA REAL
+      const pIdx = MOCK_PERMISOS.findIndex(p => p.id === id);
+      if (pIdx === -1) throw new Error('Permiso no encontrado');
+      const permiso = MOCK_PERMISOS[pIdx];
+
+      if(permiso.aprobacionMedica) {
+        const userStr = localStorage.getItem('auth_user');
+        const user = userStr ? JSON.parse(userStr) : { id: 'doc', name: 'Doctora' };
+
+        permiso.aprobacionMedica.estado = 'FIRMADO'; 
+        permiso.aprobacionMedica.fechaFirma = new Date().toISOString(); 
+        permiso.aprobacionMedica.usuarioFirma = { id: user.id, nombre: user.name || 'Doctora' }; 
+        permiso.aprobacionMedica.firmaUrl = f; 
+      }
+
+      // VERIFICACIÓN DE ACTIVACIÓN: Operativo + Médico
+      const allS = permiso.aprobaciones.every(a => a.estado === 'FIRMADO'); 
+      const medS = !permiso.aprobacionMedica || permiso.aprobacionMedica.estado === 'FIRMADO';
+      
+      if(allS && medS) {
+        permiso.estado = 'ACTIVO';
+      }
+      
+      savePermisos(); // GUARDAR CAMBIOS
+      return JSON.parse(JSON.stringify(permiso));
   }
 
   async cerrarPermiso(id: string, obs: string, f: string): Promise<Permiso> {
@@ -121,9 +170,13 @@ export class MockPermisoService implements PermisoService {
     if (permiso.tiposTrabajo.some(t => ['QUIMICOS', 'ESPACIOS_CONFINADOS'].includes(t))) {
       cierres.push(createAprobacion('INSPECTOR'));
     }
-    cierres.push(createAprobacion('APROBADOR_HSEQ'), createAprobacion('APROBADOR_AREA'));
+    // Orden: Area luego HSE
+    cierres.push(createAprobacion('APROBADOR_AREA'));
+    cierres.push(createAprobacion('APROBADOR_HSEQ'));
+    
     permiso.aprobacionesCierre = cierres;
 
+    savePermisos();
     return JSON.parse(JSON.stringify(permiso));
   }
 
@@ -165,28 +218,19 @@ export class MockPermisoService implements PermisoService {
       permiso.estado = 'CERRADO';
     }
 
+    savePermisos();
     return JSON.parse(JSON.stringify(permiso));
-  }
-
-  async firmarAptitudMedica(id: string, f: string) {
-      const p = await this.getById(id);
-      if(p.aprobacionMedica) { 
-        p.aprobacionMedica.estado='FIRMADO'; 
-        p.aprobacionMedica.fechaFirma=new Date().toISOString(); 
-        p.aprobacionMedica.usuarioFirma={id:'doc', nombre:'Doctora'}; 
-        p.aprobacionMedica.firmaUrl=f; 
-      }
-      const all=p.aprobaciones.every(a=>a.estado==='FIRMADO'); 
-      const med=!p.aprobacionMedica||p.aprobacionMedica.estado==='FIRMADO';
-      if(all&&med) p.estado='ACTIVO';
-      return JSON.parse(JSON.stringify(p));
   }
 
   async completarMonitoreo() { return {} as any; } 
 
   async aplazar(id: string, m: string) { 
-    const p = await this.getById(id); 
-    p.estado='APLAZADO'; 
-    return JSON.parse(JSON.stringify(p)); 
+    const pIdx = MOCK_PERMISOS.findIndex(p => p.id === id);
+    if (pIdx !== -1) {
+        MOCK_PERMISOS[pIdx].estado = 'APLAZADO';
+        savePermisos();
+        return JSON.parse(JSON.stringify(MOCK_PERMISOS[pIdx]));
+    }
+    throw new Error('Not found');
   }
 }

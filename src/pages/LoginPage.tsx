@@ -3,7 +3,7 @@ import { useState } from 'preact/hooks';
 import { route } from 'preact-router';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/UI/Button';
-import { Input } from '@/components/UI/Input'; // Re-usaremos el Input, pero lo adaptamos
+import { Input } from '@/components/UI/Input'; 
 
 export const LoginPage: FunctionalComponent<{ path?: string }> = () => {
   const { login, isAuthenticated } = useAuth();
@@ -61,7 +61,7 @@ export const LoginPage: FunctionalComponent<{ path?: string }> = () => {
               placeholder="tu@email.com"
               required
               disabled={loading}
-              className={inputClass} // Aplicamos clase de tema claro
+              className={inputClass} 
             />
           </div>
 
@@ -76,7 +76,7 @@ export const LoginPage: FunctionalComponent<{ path?: string }> = () => {
               placeholder="••••••••"
               required
               disabled={loading}
-              className={inputClass} // Aplicamos clase de tema claro
+              className={inputClass} 
             />
           </div>
 
@@ -89,20 +89,31 @@ export const LoginPage: FunctionalComponent<{ path?: string }> = () => {
           </button>
         </form>
 
-        {/* --- (REEMPLAZADO) --- */}
+        {/* --- SECCIÓN DE USUARIOS DE PRUEBA ACTUALIZADA --- */}
         <div className="mt-6 sm:mt-8 p-3 sm:p-4 bg-gray-50 rounded-lg text-xs text-gray-600">
           <strong className="block mb-2 text-gray-700 text-xs sm:text-sm">
             Usuarios de prueba (pass: user123):
           </strong>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-2 sm:gap-x-4 gap-y-1 text-xs">
+          
+          {/* Roles Principales */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-2 sm:gap-x-4 gap-y-1 text-xs border-b border-gray-200 pb-2 mb-2">
             <span className="break-all">Admin: ana@example.com</span>
             <span className="break-all">HSEQ: wilson@example.com</span>
             <span className="break-all">Solicitante: jorge@example.com</span>
             <span className="break-all">Área: nelson@example.com</span>
-            <span className="break-all">Trabajador: maria@example.com</span>
             <span className="break-all">Doctora: medica@example.com</span>
+            <span className="break-all">Inspector: inspector@example.com</span>
+          </div>
+
+          {/* Trabajadores Adicionales */}
+          <strong className="block mb-1 text-gray-500 text-[10px] uppercase">Trabajadores:</strong>
+          <div className="grid grid-cols-1 gap-1 text-xs">
+            <span className="break-all">carlos.andrade@moderna.com.ec (INTERNO)</span>
+            <span className="break-all">maria.lopez@moderna.com.ec (INTERNO)</span>
+            <span className="break-all">pedro.ramirez@externo.com  (EXTERNO)</span>
           </div>
         </div>
+
       </div>
     </div>
   );
