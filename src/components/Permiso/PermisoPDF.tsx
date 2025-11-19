@@ -1,5 +1,5 @@
 import { FunctionalComponent } from 'preact';
-import { Permiso, TipoTrabajo, Aprobacion, Monitoreo } from '@/types';
+import { Permiso } from '@/types';
 import logo from '@/images/logo.png';
 
 interface PermisoPDFProps {
@@ -56,7 +56,6 @@ const STYLES = {
 // --- HELPERS ---
 const formatDate = (d?: string) => d ? new Date(d).toLocaleDateString('es-EC') : '';
 const formatDateTime = (d?: string) => d ? new Date(d).toLocaleString('es-EC', { hour12: false }) : '';
-const normalize = (str: string) => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
 
 // --- SUB-COMPONENTES REUTILIZABLES ---
 
@@ -118,16 +117,19 @@ const HeaderContent = ({ permiso, pageNumber }: { permiso: Permiso, pageNumber: 
 export const PermisoPDF: FunctionalComponent<PermisoPDFProps> = ({ permiso, id }) => {
   if (!permiso) return null;
 
-  // --- DATOS ---
+  // --- DATOS APERTURA ---
   const solicitante = permiso.aprobaciones.find(a => a.rolFirmante === 'SOLICITANTE');
   const hseq = permiso.aprobaciones.find(a => a.rolFirmante === 'APROBADOR_HSEQ');
   const area = permiso.aprobaciones.find(a => a.rolFirmante === 'APROBADOR_AREA');
-  const lider = permiso.aprobaciones.find(a => a.rolFirmante === 'LIDER');
+  
+  // --- DATOS CIERRE (Corregido orden) ---
+  // 1. HSEQ Cierre
+  const hseqCierre = permiso.aprobacionesCierre.find(a => a.rolFirmante === 'APROBADOR_HSEQ');
+  // 2. Area Cierre (Lider/Residente)
+  const areaCierre = permiso.aprobacionesCierre.find(a => a.rolFirmante === 'APROBADOR_AREA');
+  
   const inspector = permiso.monitoreo;
   
-  // Aquí obtenemos al TRABAJADOR para la firma de cabecera (Ejecutor)
-  const trabajadorRep = permiso.aprobaciones.find(a => a.rolFirmante === 'TRABAJADOR');
-
   const tipos = [
     { l: 'Trabajo en Caliente', v: 'CALIENTE' }, { l: 'Trabajo en Frío', v: 'FRIO' },
     { l: 'Trabajo en Alturas', v: 'ALTURAS' }, { l: 'Espacios Confinados', v: 'ESPACIOS_CONFINADOS' },
@@ -135,20 +137,17 @@ export const PermisoPDF: FunctionalComponent<PermisoPDFProps> = ({ permiso, id }
     { l: 'Izajes de Cargas', v: 'IZAJES' }, { l: 'Excavaciones', v: 'EXCAVACIONES' }
   ];
 
-  // Lógica de firma en tabla de personal (Solicitante)
-  const getFirmaSiEsSolicitante = (nombres: string, apellidos: string) => {
-    const nombreCompletoPersonal = normalize(`${nombres} ${apellidos}`);
-    const nombreSolicitante = normalize(solicitante?.usuarioFirma?.nombre || '');
-    const nombreRegistroSolicitante = normalize(permiso.solicitante.nombre || '');
-    const estaFirmado = solicitante?.estado === 'FIRMADO' && solicitante.firmaUrl;
+  const showGasTable = permiso.tiposTrabajo.some(t => ['ESPACIOS_CONFINADOS', 'QUIMICOS'].includes(t));
 
-    if (estaFirmado) {
-      const matchFirma = nombreSolicitante && (nombreCompletoPersonal.includes(nombreSolicitante) || nombreSolicitante.includes(nombreCompletoPersonal));
-      const matchReg = nombreRegistroSolicitante && (nombreCompletoPersonal.includes(nombreRegistroSolicitante) || nombreRegistroSolicitante.includes(nombreCompletoPersonal));
-
-      if (matchFirma || matchReg) {
-         return <img src={solicitante.firmaUrl} alt="Firma" style={{ height: '42px', display: 'block', margin: '0 auto' }} />;
-      }
+  const getFirmaWorker = (personalId?: string) => {
+    if (!personalId) return null;
+    const approval = permiso.aprobaciones.find(a => 
+      a.rolFirmante === 'TRABAJADOR' && 
+      a.usuarioAsignado?.id === personalId &&
+      a.estado === 'FIRMADO'
+    );
+    if (approval?.firmaUrl) {
+      return <img src={approval.firmaUrl} alt="Firma" style={{ height: '42px', display: 'block', margin: '0 auto' }} />;
     }
     return null;
   };
@@ -156,7 +155,7 @@ export const PermisoPDF: FunctionalComponent<PermisoPDFProps> = ({ permiso, id }
   return (
     <div id={id} style={{ ...STYLES.container, padding: 0 }}>
       
-      {/* 1. Bloque de Encabezado (para ser capturado por separado en ambas páginas) */}
+      {/* Header Oculto (para clonación) */}
       <div id="pdf-header-content" style={{padding: '0 45px 0 45px'}}> 
           <HeaderContent permiso={permiso} pageNumber={1} /> 
       </div>
@@ -192,12 +191,11 @@ export const PermisoPDF: FunctionalComponent<PermisoPDFProps> = ({ permiso, id }
                 <SignatureBlock firmaUrl={area?.firmaUrl} nombre={area?.usuarioFirma?.nombre} cargo="APROBADOR ÁREA" fecha={area?.estado === 'FIRMADO' ? formatDate(area.fechaFirma) : ''} />
               </td>
               <td style={{ ...STYLES.cell, width: '25%', padding: 0 }}>
-                {/* AQUI ESTA EL CAMBIO: Usamos trabajadorRep en lugar de solicitante */}
                 <SignatureBlock 
-                  firmaUrl={trabajadorRep?.firmaUrl} 
-                  nombre={trabajadorRep?.usuarioFirma?.nombre} 
-                  cargo="TRABAJADOR" 
-                  fecha={trabajadorRep?.estado === 'FIRMADO' ? formatDate(trabajadorRep.fechaFirma) : ''} 
+                  firmaUrl={solicitante?.firmaUrl} 
+                  nombre={solicitante?.usuarioFirma?.nombre} 
+                  cargo="SOLICITANTE" 
+                  fecha={solicitante?.estado === 'FIRMADO' ? formatDate(solicitante.fechaFirma) : ''} 
                 />
               </td>
               <td style={{ ...STYLES.cell, width: '25%', padding: 0 }}>
@@ -268,7 +266,7 @@ export const PermisoPDF: FunctionalComponent<PermisoPDFProps> = ({ permiso, id }
           </tbody>
         </table>
 
-        {/* 3. PERSONAL AUTORIZADO --- */}
+        {/* 3. PERSONAL AUTORIZADO */}
         <div style={STYLES.sectionTitle}>3. PERSONAL AUTORIZADO</div>
         <table style={STYLES.table}>
           <thead>
@@ -286,7 +284,7 @@ export const PermisoPDF: FunctionalComponent<PermisoPDFProps> = ({ permiso, id }
                 <td style={STYLES.cellCenter}>{p.cedula}</td>
                 <td style={STYLES.cell}>{p.actividad || 'N/A'}</td>
                 <td style={{ ...STYLES.cellCenter, padding: '0', height: '72px' }}>
-                  {getFirmaSiEsSolicitante(p.nombres, p.apellidos)}
+                  {getFirmaWorker(p.id)}
                 </td>
               </tr>
             ))}
@@ -296,9 +294,9 @@ export const PermisoPDF: FunctionalComponent<PermisoPDFProps> = ({ permiso, id }
 
       {/* ================= BLOQUE DE PÁGINA 2 ================= */}
       <div id="page-2-content" style={STYLES.page}>
-        <HeaderContent permiso={permiso} pageNumber={2} /> {/* Header en P2 */}
+        <HeaderContent permiso={permiso} pageNumber={2} />
 
-        {/* 4. ATS (MOVIDO A PÁGINA 2) --- */}
+        {/* 4. ATS */}
         <div style={STYLES.sectionTitle}>4. ANÁLISIS DE TRABAJO SEGURO (ATS)</div>
         <table style={STYLES.table}>
           <thead>
@@ -314,13 +312,11 @@ export const PermisoPDF: FunctionalComponent<PermisoPDFProps> = ({ permiso, id }
               <tr key={i}>
                 <td style={{ ...STYLES.cell, verticalAlign: 'top' }}>{t.descripcion}</td>
                 <td style={{ ...STYLES.cell, verticalAlign: 'top' }}>
-                  {/* Lista limpia sin viñetas desalineadas */}
                   <div style={{padding: '5px 0'}}>
                     {t.peligros.map((x, j) => <CleanListItem key={j} text={x} />)}
                   </div>
                 </td>
                 <td style={{ ...STYLES.cell, verticalAlign: 'top' }}>
-                   {/* Lista limpia sin viñetas desalineadas */}
                    <div style={{padding: '5px 0'}}>
                     {t.medidas.map((x, j) => <CleanListItem key={j} text={x} />)}
                   </div>
@@ -335,85 +331,57 @@ export const PermisoPDF: FunctionalComponent<PermisoPDFProps> = ({ permiso, id }
           </tbody>
         </table>
 
-        {/* 5. MONITOREO --- */}
-        <div style={STYLES.sectionTitle}>5. REGISTRO DE MONITOREO DE GASES (Si aplica)</div>
-        <table style={STYLES.table}>
-          <thead>
-            <tr>
-              <th style={STYLES.headerCell}>GAS</th>
-              <th style={STYLES.headerCell}>REGISTRO INICIAL</th>
-              <th style={STYLES.headerCell}>REGISTRO A LA MITAD</th>
-              <th style={STYLES.headerCell}>REGISTRO FINAL</th>
-              <th style={{ ...STYLES.headerCell, width: '25%' }}>INSPECTOR RESPONSABLE</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td style={{...STYLES.cell, fontWeight: 'bold'}}>Oxígeno (O2)</td>
-              <td style={STYLES.cellCenter}>{inspector?.lecturaInicial?.o2}</td>
-              <td style={STYLES.cellCenter}>{''}</td> {/* A la mitad (Vacío) */}
-              <td style={STYLES.cellCenter}>{inspector?.lecturaPeriodica?.o2}</td> {/* Final */}
-              <td rowSpan={4} style={{ ...STYLES.cell, padding: 0, verticalAlign: 'bottom' }}>
-                 <SignatureBlock 
-                   firmaUrl={inspector?.firmaUrl} nombre={inspector?.usuarioFirma?.nombre} cargo="INSPECTOR"
-                 />
-              </td>
-            </tr>
-            <tr>
-              <td style={{...STYLES.cell, fontWeight: 'bold'}}>Monóxido (CO)</td>
-              <td style={STYLES.cellCenter}>{inspector?.lecturaInicial?.co}</td>
-              <td style={STYLES.cellCenter}>{''}</td>
-              <td style={STYLES.cellCenter}>{inspector?.lecturaPeriodica?.co}</td>
-            </tr>
-            <tr>
-              <td style={{...STYLES.cell, fontWeight: 'bold'}}>Explosividad (LEL)</td>
-              <td style={STYLES.cellCenter}>{inspector?.lecturaInicial?.lel}</td>
-              <td style={STYLES.cellCenter}>{''}</td>
-              <td style={STYLES.cellCenter}>{inspector?.lecturaPeriodica?.lel}</td>
-            </tr>
-            <tr>
-              <td style={{...STYLES.cell, fontWeight: 'bold'}}>PH3 (FOSFINA)</td>
-              <td style={STYLES.cellCenter}>{inspector?.lecturaInicial?.h2s || ''}</td>
-              <td style={STYLES.cellCenter}>{''}</td>
-              <td style={STYLES.cellCenter}>{inspector?.lecturaPeriodica?.h2s || ''}</td>
-            </tr>
-          </tbody>
-        </table>
+        {/* 5. MONITOREO DE GASES (CONDICIONAL Y CON 3 COLUMNAS) */}
+        {showGasTable && (
+          <>
+            <div style={STYLES.sectionTitle}>5. MONITOREO DE GASES (ESPACIOS CONFINADOS / QUÍMICOS)</div>
+            <table style={STYLES.table}>
+              <thead>
+                <tr>
+                  <th style={STYLES.headerCell}>GAS</th>
+                  <th style={STYLES.headerCell}>INICIAL</th>
+                  <th style={STYLES.headerCell}>INTERMEDIO</th>
+                  <th style={STYLES.headerCell}>FINAL</th>
+                  <th style={{ ...STYLES.headerCell, width: '25%' }}>INSPECTOR RESPONSABLE</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style={{...STYLES.cell, fontWeight: 'bold'}}>Oxígeno (O2)</td>
+                  <td style={STYLES.cellCenter}>{inspector?.lecturaInicial?.o2}</td>
+                  <td style={STYLES.cellCenter}>{inspector?.lecturaIntermedia?.o2}</td> 
+                  <td style={STYLES.cellCenter}>{inspector?.lecturaFinal?.o2}</td> 
+                  <td rowSpan={4} style={{ ...STYLES.cell, padding: 0, verticalAlign: 'bottom' }}>
+                     <SignatureBlock 
+                       firmaUrl={inspector?.firmaUrl} nombre={inspector?.usuarioFirma?.nombre} cargo="INSPECTOR"
+                     />
+                  </td>
+                </tr>
+                <tr>
+                  <td style={{...STYLES.cell, fontWeight: 'bold'}}>Monóxido (CO)</td>
+                  <td style={STYLES.cellCenter}>{inspector?.lecturaInicial?.co}</td>
+                  <td style={STYLES.cellCenter}>{inspector?.lecturaIntermedia?.co}</td>
+                  <td style={STYLES.cellCenter}>{inspector?.lecturaFinal?.co}</td>
+                </tr>
+                <tr>
+                  <td style={{...STYLES.cell, fontWeight: 'bold'}}>Explosividad (LEL)</td>
+                  <td style={STYLES.cellCenter}>{inspector?.lecturaInicial?.lel}</td>
+                  <td style={STYLES.cellCenter}>{inspector?.lecturaIntermedia?.lel}</td>
+                  <td style={STYLES.cellCenter}>{inspector?.lecturaFinal?.lel}</td>
+                </tr>
+                <tr>
+                  <td style={{...STYLES.cell, fontWeight: 'bold'}}>PH3 (FOSFINA)</td>
+                  <td style={STYLES.cellCenter}>{inspector?.lecturaInicial?.h2s || ''}</td>
+                  <td style={STYLES.cellCenter}>{inspector?.lecturaIntermedia?.h2s || ''}</td>
+                  <td style={STYLES.cellCenter}>{inspector?.lecturaFinal?.h2s || ''}</td>
+                </tr>
+              </tbody>
+            </table>
+          </>
+        )}
 
-        {/* 6. FIRMAS DE APROBACIÓN --- */}
-        <div style={STYLES.sectionTitle}>6. FIRMAS DE APROBACIÓN</div>
-        <table style={STYLES.table}>
-          <tbody>
-            <tr>
-              <td style={{ ...STYLES.cell, width: '25%', padding: 0 }}>
-                <SignatureBlock firmaUrl={solicitante?.firmaUrl} nombre={solicitante?.usuarioFirma?.nombre} cargo="SOLICITANTE" />
-              </td>
-              <td style={{ ...STYLES.cell, width: '25%', padding: 0 }}>
-                <SignatureBlock 
-                   firmaUrl={trabajadorRep?.firmaUrl} 
-                   nombre={trabajadorRep?.usuarioFirma?.nombre || '_________________'} 
-                   cargo="TRABAJADOR (REP)" 
-                />
-              </td>
-              <td style={{ ...STYLES.cell, width: '25%', padding: 0 }}>
-                <SignatureBlock firmaUrl={hseq?.firmaUrl} nombre={hseq?.usuarioFirma?.nombre} cargo="APROBADOR HSEQ" />
-              </td>
-              <td style={{ ...STYLES.cell, width: '25%', padding: 0 }}>
-                <SignatureBlock firmaUrl={area?.firmaUrl} nombre={area?.usuarioFirma?.nombre} cargo="APROBADOR ÁREA" />
-              </td>
-            </tr>
-            {permiso.aprobacionMedica && (
-              <tr>
-                <td colSpan={4} style={{ ...STYLES.cell, padding: 0 }}>
-                  <SignatureBlock firmaUrl={permiso.aprobacionMedica.firmaUrl} nombre={permiso.aprobacionMedica.usuarioFirma?.nombre} cargo="APTITUD MÉDICA" />
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-
-        {/* 7. TERMINACIÓN --- */}
-        <div style={STYLES.sectionTitle}>7. TÉRMINO DEL PERMISO DE TRABAJO</div>
+        {/* 6. TERMINACIÓN (FIRMADA POR HSEQ Y ÁREA) */}
+        <div style={STYLES.sectionTitle}>{showGasTable ? '6' : '5'}. TÉRMINO DEL PERMISO DE TRABAJO</div>
         <table style={STYLES.table}>
           <tbody>
             <tr>
@@ -426,7 +394,8 @@ export const PermisoPDF: FunctionalComponent<PermisoPDFProps> = ({ permiso, id }
                   </div>
                   <div>
                      <strong>FECHA DE CULMINACIÓN:</strong> 
-                     <span style={{ marginLeft: '15px', borderBottom: '1px solid #000', minWidth: '180px', display: 'inline-block', textAlign: 'center', fontWeight: 'bold' }}>
+                     {/* FECHA SIN RAYA (Estilo corregido) */}
+                     <span style={{ marginLeft: '15px', minWidth: '180px', display: 'inline-block', textAlign: 'center', fontWeight: 'bold' }}>
                        {permiso.estado === 'CERRADO' ? formatDateTime(permiso.fechaCaducidad) : ''}
                      </span>
                   </div>
@@ -434,11 +403,22 @@ export const PermisoPDF: FunctionalComponent<PermisoPDFProps> = ({ permiso, id }
               </td>
             </tr>
             <tr>
+              {/* ORDEN CORREGIDO: Primero HSEQ (col 1), Luego ÁREA (col 2) */}
               <td style={{ ...STYLES.cell, width: '50%', padding: 0 }}>
-                 <SignatureBlock firmaUrl={lider?.firmaUrl} nombre={lider?.usuarioFirma?.nombre} cargo="LÍDER / RESIDENTE (CIERRE)" />
+                 <SignatureBlock 
+                    firmaUrl={hseqCierre?.firmaUrl} 
+                    nombre={hseqCierre?.usuarioFirma?.nombre} 
+                    cargo="RESPONSABLE HSEQ (ARCHIVO)" 
+                    fecha={hseqCierre?.estado === 'FIRMADO' ? formatDate(hseqCierre.fechaFirma) : ''}
+                 />
               </td>
               <td style={{ ...STYLES.cell, width: '50%', padding: 0 }}>
-                 <SignatureBlock firmaUrl={null} nombre="_________________" cargo="RESPONSABLE HSEQ (ARCHIVO)" />
+                 <SignatureBlock 
+                    firmaUrl={areaCierre?.firmaUrl} 
+                    nombre={areaCierre?.usuarioFirma?.nombre} 
+                    cargo="LÍDER / RESIDENTE (CIERRE)" 
+                    fecha={areaCierre?.estado === 'FIRMADO' ? formatDate(areaCierre.fechaFirma) : ''}
+                 />
               </td>
             </tr>
             <tr>

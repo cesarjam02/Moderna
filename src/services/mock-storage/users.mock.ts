@@ -91,86 +91,82 @@ const initialUsers: UserWithPassword[] = [
     active: true,
     createdAt: new Date().toISOString(),
   },
+  {
+    id: 'w1', // Debe coincidir con el ID en personnel.mock.ts para consistencia
+    name: 'Carlos Alberto Andrade Ruiz',
+    email: 'carlos.andrade@moderna.com.ec',
+    password: 'user123',
+    role: 'TRABAJADOR',
+    roles: ['TRABAJADOR'],
+    active: true,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'w2',
+    name: 'Maria Fernanda Lopez Torres',
+    email: 'maria.lopez@moderna.com.ec',
+    password: 'user123',
+    role: 'TRABAJADOR',
+    roles: ['TRABAJADOR'],
+    active: true,
+    createdAt: new Date().toISOString(),
+  },
+
+  // 2 EXTERNOS
+  {
+    id: 'w6',
+    name: 'Pedro Jose Ramirez Silva',
+    email: 'pedro.ramirez@externo.com',
+    password: 'user123',
+    role: 'TRABAJADOR',
+    roles: ['TRABAJADOR'],
+    active: true,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: 'w7',
+    name: 'Ana Gabriela Suarez Pinto',
+    email: 'ana.suarez@externo.com',
+    password: 'user123',
+    role: 'TRABAJADOR',
+    roles: ['TRABAJADOR'],
+    active: true,
+    createdAt: new Date().toISOString(),
+  }
 ];
 
-// Almacenamiento en memoria compartido
 let usersWithPasswords: UserWithPassword[] = [...initialUsers];
 
 export const MockUsersStorage = {
-  /**
-   * Obtiene todos los usuarios con contraseñas
-   */
-  getAll(): UserWithPassword[] {
-    return [...usersWithPasswords];
-  },
-
-  /**
-   * Busca un usuario por email (case-insensitive)
-   */
+  getAll(): UserWithPassword[] { return [...usersWithPasswords]; },
   findByEmail(email: string): UserWithPassword | undefined {
     const normalizedEmail = email.trim().toLowerCase();
     return usersWithPasswords.find((u) => u.email.trim().toLowerCase() === normalizedEmail);
   },
-
-  /**
-   * Busca un usuario por ID
-   */
   findById(id: string): UserWithPassword | undefined {
     return usersWithPasswords.find((u) => u.id === id);
   },
-
-  /**
-   * Agrega un nuevo usuario con contraseña
-   */
   add(user: UserWithPassword): void {
-    // Asegurarse de que el email esté normalizado
-    const normalizedUser = {
-      ...user,
-      email: user.email.trim().toLowerCase(),
-    };
-    usersWithPasswords.push(normalizedUser);
-    console.log('Usuario agregado al almacenamiento:', normalizedUser.email, 'Total usuarios:', usersWithPasswords.length);
+    usersWithPasswords.push({ ...user, email: user.email.trim().toLowerCase() });
   },
-
-  /**
-   * Actualiza un usuario existente
-   */
   update(id: string, updates: Partial<UserWithPassword>): void {
     const index = usersWithPasswords.findIndex((u) => u.id === id);
     if (index !== -1) {
       const updated = { ...usersWithPasswords[index], ...updates };
-      // Asegurar que siempre tenga roles
-      if (!updated.roles || updated.roles.length === 0) {
-        updated.roles = [updated.role];
-      }
+      if (!updated.roles || updated.roles.length === 0) updated.roles = [updated.role];
       usersWithPasswords[index] = updated;
     }
   },
-
-  /**
-   * Elimina un usuario
-   */
   remove(id: string): boolean {
     const prevLength = usersWithPasswords.length;
     usersWithPasswords = usersWithPasswords.filter((u) => u.id !== id);
     return usersWithPasswords.length < prevLength;
   },
-
-  /**
-   * Obtiene solo los usuarios (sin contraseñas) para compatibilidad
-   */
   getUsers(): User[] {
     return usersWithPasswords.map(({ password, ...user }) => ({
       ...user,
-      roles: user.roles || [user.role], // Asegurar que siempre tenga roles
+      roles: user.roles || [user.role],
     }));
   },
-
-  /**
-   * Resetea el almacenamiento a los usuarios iniciales (útil para testing)
-   */
-  reset(): void {
-    usersWithPasswords = [...initialUsers];
-  },
+  reset(): void { usersWithPasswords = [...initialUsers]; },
 };
-

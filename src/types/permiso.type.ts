@@ -1,49 +1,15 @@
 import { UserId, UserRole } from './users.type';
 
+export * from './users.type';
+export * from './company.type';
+export * from './auth.type';
+
 // --- Tipos Centrales ---
 
-/** El objeto principal del Permiso de Trabajo. Contiene toda la información. */
-export interface Permiso {
-  id: string;
-  numero: string; // Ej: "000009"
-  estado: PermisoEstado;
-  
-  // Paso 1: Información General
-  solicitanteId: UserId;
-  solicitante: {
-    id: UserId;
-    nombre: string;
-  };
-  fechaSolicitud: string; // ISO Date
-  fechaInicio: string; // ISO Date
-  fechaCaducidad: string; // ISO Date
-  descripcionGeneral: string;
-  departamento: Departamento;
-  area: string;
-  maquinaria: string;
-  localidad?: string;
-  tiposTrabajo: TipoTrabajo[];
-  personalAutorizado: PersonalAutorizado[];
+export type PermisoEstado = 'PENDIENTE' | 'ACTIVO' | 'EN_CIERRE' | 'CERRADO' | 'APLAZADO';
 
-  // Paso 2: Análisis de Trabajo Seguro (ATS)
-  ats: AnalisisTrabajoSeguro;
-
-  // Documentos adjuntos (Requerimiento #8)
-  documentos: Documento[];
-
-  // Flujo de Aprobaciones
-  aprobaciones: Aprobacion[]; // Las 4 firmas principales (Solicitante, HSEQ, etc.)
-  aprobacionMedica: Aprobacion | null; // Firma de la Doctora (Requerimiento #9)
-  monitoreo: Aprobacion | null; // Firma del Inspector (solo si ESPACIOS_CONFINADOS)
-}
-
-/** Define el estado actual del permiso en su ciclo de vida. (Requerimiento #2) */
-export type PermisoEstado = 'PENDIENTE' | 'ACTIVO' | 'CERRADO' | 'APLAZADO';
-
-/** Departamentos fijos de la empresa. (Requerimiento #3) */
 export type Departamento = 'LOGISTICA' | 'PRODUCCION' | 'ADMINISTRACION' | 'CALIDAD' | 'HSE';
 
-/** Tipos de trabajo que activan diferentes lógicas. */
 export type TipoTrabajo = 
   | 'FRIO' 
   | 'CALIENTE' 
@@ -53,68 +19,96 @@ export type TipoTrabajo =
   | 'QUIMICOS' 
   | 'IZAJES' 
   | 'EXCAVACIONES'
-    'EXCAVACIONES / ZANJAS';
+  | 'EXCAVACIONES / ZANJAS';
 
-
-// --- Sub-Interfaces ---
-
-/** * Representa una Tarea individual dentro del ATS.
- * Cada tarea tiene sus propios peligros y medidas. (Requerimiento #6)
- */
 export interface TareaATS {
   id: string;
   descripcion: string;
-  peligros: string[]; // Array de peligros seleccionados para ESTA tarea
-  medidas: string[]; // Array de medidas seleccionadas para ESTA tarea
+  peligros: string[]; 
+  medidas: string[]; 
 }
 
-/** El Análisis de Trabajo Seguro completo. */
 export interface AnalisisTrabajoSeguro {
+  id?: string;
   cantidadPersonas: number;
-  tareas: TareaATS[]; // Un permiso puede tener múltiples tareas
+  tareas: TareaATS[]; 
 }
 
-/** Representa a una persona (interna o externa) que participará en el trabajo. */
 export interface PersonalAutorizado {
-  id: string; // Puede ser un ID de User o un DNI/cédula
+  id?: string;
   nombres: string;
   apellidos: string;
   cedula: string;
   tipo: 'INTERNO' | 'EXTERNO';
+  actividad?: string;
 }
 
-/** * Representa un documento adjunto al permiso. 
- * Requerido para personal EXTERNO. (Requerimiento #8)
- */
 export interface Documento {
   id: string;
   tipo: 'CEDULA' | 'ANTECEDENTES' | 'INDUCCION_HSE' | 'IESS' | 'HERRAMIENTAS_IPT' | 'APTITUD_MEDICA' | 'CERTIFICADO_ALTURA' | 'CERTIFICADO_IZAJE';
   nombreArchivo: string;
-  url: string; // URL al archivo almacenado (ej. S3, Firebase Storage)
+  url: string; 
+  personalId?: string; 
 }
 
-/** * Representa una única firma en cualquier parte del proceso 
- * (Aprobación principal, médica o monitoreo). 
- */
 export interface Aprobacion {
   id: string;
-  rolFirmante: UserRole; // El rol que DEBE firmar (ej. 'APROBADOR_HSEQ')
+  rolFirmante: UserRole; 
   estado: 'PENDIENTE' | 'FIRMADO';
-  usuarioFirma?: {
-    id: UserId;
-    nombre: string;
-  };
-  fechaFirma?: string; // ISO Date
+  usuarioAsignado?: { id: UserId; nombre: string; };
+  usuarioFirma?: { id: UserId; nombre: string; };
+  fechaFirma?: string; 
+  firmaUrl?: string | null; 
 }
 
+export interface LecturaGases {
+  o2: string;
+  co: string;
+  lel: string;
+  h2s: string;
+}
 
-// --- DTOs (Data Transfer Objects) ---
+export interface Monitoreo extends Aprobacion {
+  // LAS 3 LECTURAS REQUERIDAS PARA CIERRE DE ESPACIOS CONFINADOS
+  lecturaInicial?: LecturaGases;
+  lecturaIntermedia?: LecturaGases;
+  lecturaFinal?: LecturaGases;
+}
 
-/** * Objeto de datos necesario para crear un nuevo Permiso.
- * Es lo que se envía a la API desde el formulario de "Crear Permiso".
- */
+export interface Permiso {
+  id: string;
+  numero: string; 
+  estado: PermisoEstado;
+  
+  solicitanteId: UserId;
+  solicitante: { id: UserId; nombre: string; };
+  fechaSolicitud: string; 
+  fechaInicio: string; 
+  fechaCaducidad: string;
+  descripcionGeneral: string;
+  departamento: Departamento;
+  area: string;
+  maquinaria: string;
+  localidad?: string;
+  tiposTrabajo: TipoTrabajo[];
+  personalAutorizado: PersonalAutorizado[];
+  contratista?: string;
+  rucContratista?: string;
+
+  ats: AnalisisTrabajoSeguro;
+  documentos: Documento[];
+
+  aprobaciones: Aprobacion[];
+  aprobacionMedica: Aprobacion | null;
+  
+  // El inspector llena esto al cierre si es necesario
+  monitoreo: Monitoreo | null; 
+  
+  aprobacionesCierre: Aprobacion[]; 
+  observacionesCierre?: string;
+}
+
 export interface CreatePermisoDTO {
-  // Info General
   fechaInicio: string;
   fechaCaducidad: string;
   descripcionGeneral: string;
@@ -122,11 +116,12 @@ export interface CreatePermisoDTO {
   area: string;
   maquinaria: string;
   tiposTrabajo: TipoTrabajo[];
-  personalAutorizado: PersonalAutorizado[];
-  
-  // ATS
-  ats: AnalisisTrabajoSeguro;
-
-  // Documentos (asociados a cada persona autorizada)
-  documentos: Array<{ tipo: Documento['tipo'], file: File, personalId: string }>; // Se usa 'File' para la subida
+  personalAutorizado: (Omit<PersonalAutorizado, 'id'> & { id?: string })[];
+  ats: {
+    cantidadPersonas: number;
+    tareas: Omit<TareaATS, 'id'>[];
+  };
+  documentos: Array<{ tipo: Documento['tipo'], file: File, personalId: string }>;
+  contratista?: string;
+  rucContratista?: string;
 }

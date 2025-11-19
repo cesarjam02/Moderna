@@ -10,36 +10,58 @@ interface MonitorModalProps {
   onConfirm: (
     signatureDataUrl: string,
     lecturaInicial: LecturaGases,
-    lecturaPeriodica: LecturaGases | null
+    lecturaIntermedia: LecturaGases,
+    lecturaFinal: LecturaGases
   ) => void;
+  title?: string;
 }
+
+const emptyGases: LecturaGases = { o2: '', co: '', lel: '', h2s: '' };
 
 export const MonitorModal: FunctionalComponent<MonitorModalProps> = ({
   isOpen,
   onClose,
   onConfirm,
+  title = "Registro de Gases"
 }) => {
+  // --- Lógica de Canvas ---
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasSignature, setHasSignature] = useState(false);
 
-  const [lecturaInicial, setLecturaInicial] = useState<LecturaGases>({ o2: '', co: '', lel: '', h2s: '' });
-  const [lecturaPeriodica, setLecturaPeriodica] = useState<LecturaGases>({ o2: '', co: '', lel: '', h2s: '' });
-  const [hasPeriodica, setHasPeriodica] = useState(false);
+  // --- Estados para las 3 Lecturas ---
+  const [lecturaInicial, setLecturaInicial] = useState<LecturaGases>({ ...emptyGases });
+  const [lecturaIntermedia, setLecturaIntermedia] = useState<LecturaGases>({ ...emptyGases });
+  const [lecturaFinal, setLecturaFinal] = useState<LecturaGases>({ ...emptyGases });
 
   const getCtx = () => canvasRef.current?.getContext('2d');
 
+  // CORRECCIÓN DE DISTORSIÓN: Ajuste de escala
   const getPos = (e: MouseEvent | TouchEvent) => {
-    const rect = canvasRef.current!.getBoundingClientRect();
+    const canvas = canvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+
+    const rect = canvas.getBoundingClientRect();
     const event = 'touches' in e ? e.touches[0] : e;
+    
+    // Calculamos la escala por si el canvas se redimensiona con CSS
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+
     return {
-      x: event.clientX - rect.left,
-      y: event.clientY - rect.top,
+      x: (event.clientX - rect.left) * scaleX,
+      y: (event.clientY - rect.top) * scaleY,
     };
   };
 
   const startDrawing = (e: MouseEvent | TouchEvent) => {
-    e.preventDefault();
+    // Prevenir scroll en móviles al firmar
+    if (e.type === 'touchstart') {
+       // No prevenimos default aquí para no bloquear clicks, pero sí en move
+    } else {
+       e.preventDefault();
+    }
+    
     const ctx = getCtx();
     if (!ctx) return;
     const { x, y } = getPos(e);
@@ -51,7 +73,7 @@ export const MonitorModal: FunctionalComponent<MonitorModalProps> = ({
 
   const draw = (e: MouseEvent | TouchEvent) => {
     if (!isDrawing) return;
-    e.preventDefault();
+    e.preventDefault(); // Evitar scroll al dibujar
     const ctx = getCtx();
     if (!ctx) return;
     const { x, y } = getPos(e);
@@ -59,9 +81,7 @@ export const MonitorModal: FunctionalComponent<MonitorModalProps> = ({
     ctx.stroke();
   };
 
-  const stopDrawing = () => {
-    setIsDrawing(false);
-  };
+  const stopDrawing = () => setIsDrawing(false);
 
   const clearSignature = () => {
     const canvas = canvasRef.current;
@@ -74,9 +94,9 @@ export const MonitorModal: FunctionalComponent<MonitorModalProps> = ({
 
   const resetForm = () => {
     clearSignature();
-    setLecturaInicial({ o2: '', co: '', lel: '', h2s: '' });
-    setLecturaPeriodica({ o2: '', co: '', lel: '', h2s: '' });
-    setHasPeriodica(false);
+    setLecturaInicial({ ...emptyGases });
+    setLecturaIntermedia({ ...emptyGases });
+    setLecturaFinal({ ...emptyGases });
   };
 
   const handleClose = () => {
@@ -87,9 +107,14 @@ export const MonitorModal: FunctionalComponent<MonitorModalProps> = ({
   const handleConfirm = () => {
     if (canvasRef.current && hasSignature) {
       const dataUrl = canvasRef.current.toDataURL('image/png');
-      const finalPeriodica = hasPeriodica ? lecturaPeriodica : null;
-      onConfirm(dataUrl, lecturaInicial, finalPeriodica);
+      // Validar campos básicos
+      if (!lecturaInicial.o2 || !lecturaIntermedia.o2 || !lecturaFinal.o2) {
+         return alert('Por favor complete al menos el campo O2 en las 3 lecturas.');
+      }
+      onConfirm(dataUrl, lecturaInicial, lecturaIntermedia, lecturaFinal);
       handleClose();
+    } else {
+      alert('Debe firmar para continuar.');
     }
   };
 
@@ -104,67 +129,61 @@ export const MonitorModal: FunctionalComponent<MonitorModalProps> = ({
         ctx.lineJoin = 'round';
       }
     }
-    if (!isOpen) {
-      resetForm();
-    }
+    if (!isOpen) resetForm();
   }, [isOpen]);
 
-  if (!isOpen) {
-    return null;
-  }
+  if (!isOpen) return null;
 
-  const canConfirm = hasSignature && 
-                     lecturaInicial.o2.trim() !== '' && 
-                     lecturaInicial.co.trim() !== '' && 
-                     lecturaInicial.lel.trim() !== '' && 
-                     lecturaInicial.h2s.trim() !== '';
+  const updateGases = (setter: (v: LecturaGases) => void, current: LecturaGases, field: keyof LecturaGases, value: string) => {
+    setter({ ...current, [field]: value });
+  };
+
+  const renderGasForm = (label: string, data: LecturaGases, setter: (v: LecturaGases) => void) => (
+    <div className="bg-gray-700 p-3 rounded-lg space-y-2 mb-4 md:mb-0 border border-gray-600">
+      <h4 className="text-sm font-bold text-yellow-400 uppercase mb-2 border-b border-gray-500 pb-1">{label}</h4>
+      <div className="grid grid-cols-2 gap-2">
+        <label className="text-xs text-gray-300">O2 (%)</label>
+        <Input value={data.o2} onInput={(e) => updateGases(setter, data, 'o2', (e.target as HTMLInputElement).value)} className="!h-8 !text-sm !p-1" />
+        
+        <label className="text-xs text-gray-300">LEL (%)</label>
+        <Input value={data.lel} onInput={(e) => updateGases(setter, data, 'lel', (e.target as HTMLInputElement).value)} className="!h-8 !text-sm !p-1" />
+        
+        <label className="text-xs text-gray-300">CO (ppm)</label>
+        <Input value={data.co} onInput={(e) => updateGases(setter, data, 'co', (e.target as HTMLInputElement).value)} className="!h-8 !text-sm !p-1" />
+        
+        <label className="text-xs text-gray-300">H2S (ppm)</label>
+        <Input value={data.h2s} onInput={(e) => updateGases(setter, data, 'h2s', (e.target as HTMLInputElement).value)} className="!h-8 !text-sm !p-1" />
+      </div>
+    </div>
+  );
 
   return (
-    <div
-      className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4"
-      onClick={handleClose}
-    >
-      <div
-        className="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-2xl text-white"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <h2 className="text-xl font-semibold mb-4">Monitoreo de Gases</h2>
+    <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4" onClick={handleClose}>
+      <div className="bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto text-white" onClick={(e) => e.stopPropagation()}>
+        
+        <div className="flex justify-between items-center mb-4 border-b border-gray-700 pb-2">
+          <h2 className="text-xl font-semibold">{title}</h2>
+          <button onClick={handleClose} className="text-gray-400 hover:text-white text-2xl">&times;</button>
+        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div>
-            <h3 className="font-semibold mb-2">Lectura Inicial (Obligatorio)</h3>
-            <div className="space-y-2">
-              <Input type="text" placeholder="O2 (%)" value={lecturaInicial.o2} onInput={(e) => setLecturaInicial(p => ({ ...p, o2: (e.target as HTMLInputElement).value }))} />
-              <Input type="text" placeholder="CO (ppm)" value={lecturaInicial.co} onInput={(e) => setLecturaInicial(p => ({ ...p, co: (e.target as HTMLInputElement).value }))} />
-              <Input type="text" placeholder="LEL (%)" value={lecturaInicial.lel} onInput={(e) => setLecturaInicial(p => ({ ...p, lel: (e.target as HTMLInputElement).value }))} />
-              <Input type="text" placeholder="H2S (ppm)" value={lecturaInicial.h2s} onInput={(e) => setLecturaInicial(p => ({ ...p, h2s: (e.target as HTMLInputElement).value }))} />
-            </div>
-          </div>
-          <div>
-            <label className="flex items-center space-x-2 mb-2">
-              <input type="checkbox" checked={hasPeriodica} onChange={(e) => setHasPeriodica((e.target as HTMLInputElement).checked)} />
-              <span>Añadir Lectura Periódica (Opcional)</span>
-            </label>
-            {hasPeriodica && (
-              <div className="space-y-2 animate-fadeIn">
-                <Input type="text" placeholder="O2 (%)" value={lecturaPeriodica.o2} onInput={(e) => setLecturaPeriodica(p => ({ ...p, o2: (e.target as HTMLInputElement).value }))} />
-                <Input type="text" placeholder="CO (ppm)" value={lecturaPeriodica.co} onInput={(e) => setLecturaPeriodica(p => ({ ...p, co: (e.target as HTMLInputElement).value }))} />
-                <Input type="text" placeholder="LEL (%)" value={lecturaPeriodica.lel} onInput={(e) => setLecturaPeriodica(p => ({ ...p, lel: (e.target as HTMLInputElement).value }))} />
-                <Input type="text" placeholder="H2S (ppm)" value={lecturaPeriodica.h2s} onInput={(e) => setLecturaPeriodica(p => ({ ...p, h2s: (e.target as HTMLInputElement).value }))} />
-              </div>
-            )}
-          </div>
+        <p className="text-sm text-gray-300 mb-4">
+          Por favor registre los valores de gases para las tres etapas del monitoreo.
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          {renderGasForm('1. Lectura Inicial', lecturaInicial, setLecturaInicial)}
+          {renderGasForm('2. Lectura Intermedia', lecturaIntermedia, setLecturaIntermedia)}
+          {renderGasForm('3. Lectura Final', lecturaFinal, setLecturaFinal)}
         </div>
 
         <div className="mb-4">
-          <p className="text-sm text-gray-400 mb-2">Firma del Inspector (Obligatorio):</p>
-          <div className="border-2 border-gray-600 rounded-lg bg-white p-2">
+          <p className="text-sm font-medium text-gray-300 mb-2">Firma del Inspector (Obligatorio):</p>
+          <div className="border-2 border-gray-600 rounded-lg bg-white p-1">
             <canvas
               ref={canvasRef}
-              width={500}
+              width={600} 
               height={200}
-              className="w-full h-48 cursor-crosshair touch-none"
-              style={{ maxWidth: '100%', height: '200px' }}
+              className="w-full h-40 cursor-crosshair touch-none block"
               onMouseDown={startDrawing}
               onMouseMove={draw}
               onMouseUp={stopDrawing}
@@ -174,30 +193,15 @@ export const MonitorModal: FunctionalComponent<MonitorModalProps> = ({
               onTouchEnd={stopDrawing}
             />
           </div>
+          <p className="text-xs text-gray-500 mt-1">Dibuje su firma en el recuadro blanco.</p>
         </div>
 
-        <div className="flex gap-2 justify-end">
-          <Button
-            onClick={clearSignature}
-            className="bg-gray-600 text-white hover:bg-gray-500"
-            disabled={!hasSignature}
-          >
-            Limpiar Firma
-          </Button>
-          <Button
-            onClick={handleClose}
-            className="bg-gray-600 text-white hover:bg-gray-500"
-          >
-            Cancelar
-          </Button>
-          <Button
-            onClick={handleConfirm}
-            className="bg-green-600 text-white hover:bg-green-500 disabled:opacity-50"
-            disabled={!canConfirm}
-          >
-            Confirmar Monitoreo
-          </Button>
+        <div className="flex gap-3 justify-end pt-4 border-t border-gray-700">
+          <Button onClick={clearSignature} className="bg-gray-600 text-white hover:bg-gray-500" disabled={!hasSignature}>Limpiar Firma</Button>
+          <Button onClick={handleClose} className="bg-gray-600 text-white hover:bg-gray-500">Cancelar</Button>
+          <Button onClick={handleConfirm} className="bg-green-600 text-white hover:bg-green-500 disabled:opacity-50" disabled={!hasSignature}>Confirmar y Guardar</Button>
         </div>
+
       </div>
     </div>
   );

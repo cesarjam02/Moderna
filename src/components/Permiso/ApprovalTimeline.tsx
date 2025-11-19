@@ -6,26 +6,15 @@ interface ApprovalTimelineProps {
 }
 
 export const ApprovalTimeline: FunctionalComponent<ApprovalTimelineProps> = ({ aprobaciones }) => {
-  // Ordenar aprobaciones: primero las firmadas (por fecha), luego las pendientes (por orden)
-  const sortedAprobaciones = [...aprobaciones].sort((a, b) => {
-    if (a.estado === 'FIRMADO' && b.estado === 'FIRMADO') {
-      return new Date(a.fechaFirma || 0).getTime() - new Date(b.fechaFirma || 0).getTime();
-    }
-    if (a.estado === 'FIRMADO') return -1;
-    if (b.estado === 'FIRMADO') return 1;
-    return 0;
-  });
-
   return (
     <div className="space-y-3">
-      {sortedAprobaciones.map(ap => (
+      {aprobaciones.map(ap => (
         <ApprovalItem key={ap.id} aprobacion={ap} />
       ))}
     </div>
   );
 };
 
-// --- Sub-componente para cada item de firma ---
 const ApprovalItem: FunctionalComponent<{ aprobacion: Aprobacion }> = ({ aprobacion }) => {
   const isSigned = aprobacion.estado === 'FIRMADO';
   
@@ -47,19 +36,15 @@ const ApprovalItem: FunctionalComponent<{ aprobacion: Aprobacion }> = ({ aprobac
         <div className={`font-semibold ${isSigned ? 'text-white' : 'text-gray-400'}`}>
           {isSigned 
             ? `${aprobacion.rolFirmante}: ${aprobacion.usuarioFirma?.nombre || 'N/A'}` 
-            : `Pendiente: ${aprobacion.rolFirmante}`
+            : aprobacion.usuarioAsignado
+                ? `Pendiente: ${aprobacion.usuarioAsignado.nombre} (${aprobacion.rolFirmante})`
+                : `Pendiente: ${aprobacion.rolFirmante}`
           }
         </div>
         <div className="text-sm text-gray-400 mt-1">
           {isSigned && aprobacion.fechaFirma
-            ? `Firmado el ${new Date(aprobacion.fechaFirma).toLocaleString('es-ES', { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric', 
-                hour: '2-digit', 
-                minute: '2-digit' 
-              })}`
-            : `Esperando firma de ${aprobacion.rolFirmante}`
+            ? `Firmado el ${new Date(aprobacion.fechaFirma).toLocaleString('es-ES')}`
+            : `Esperando firma`
           }
         </div>
       </div>
